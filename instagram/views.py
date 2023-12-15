@@ -196,6 +196,7 @@ class AccountViewSet(viewsets.ModelViewSet):
         account.status = None
         account.confirmed_problems = ""
         account.rejected_problems = ""
+        account.index = 1
         account.save()
         salesReps = SalesRep.objects.filter(instagram=account)
         for salesRep in salesReps:

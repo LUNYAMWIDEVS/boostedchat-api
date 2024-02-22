@@ -30,6 +30,8 @@ ALLOWED_HOSTS = [
     # "*",
     "0.0.0.0",
     "api.boostedchat.com",
+    f"{os.environ.get('DOMAIN1', '')}.boostedchat.com",
+    f"{os.environ.get('DOMAIN2', '')}.boostedchat.com",
     "127.0.0.1",
     "34.74.147.25",
     "34.74.147.250",
@@ -45,16 +47,19 @@ ALLOWED_HOSTS = [
     "web",
     "api",
 ]
-CSRF_TRUSTED_ORIGINS = ["https://api.boostedchat.com",
-                        "https://api.booksy.us.boostedchat.com",
-                        "https://api.jamel.boostedchat.com",
-                        "https://a69c-105-60-202-188.ngrok-free.app",
-                        "https://3e6a-62-8-92-218.ngrok-free.app",
-                        "https://3e6a-62-8-92-218.ngrok-fr",
-                        "https://ce2d-105-161-11-162.ngrok-free.app",
-                        "https://ed48-196-105-37-1.ngrok-free.app"
+CSRF_TRUSTED_ORIGINS = [
+    "https://api.boostedchat.com",
+    f"https://api.{os.environ.get('DOMAIN1', '')}.boostedchat.com",
+    f"https://api.{os.environ.get('DOMAIN2', '')}.boostedchat.com",
+    "https://api.booksy.us.boostedchat.com",
+    "https://api.jamel.boostedchat.com",
+    "https://a69c-105-60-202-188.ngrok-free.app",
+    "https://3e6a-62-8-92-218.ngrok-free.app",
+    "https://3e6a-62-8-92-218.ngrok-fr",
+    "https://ce2d-105-161-11-162.ngrok-free.app",
+    "https://ed48-196-105-37-1.ngrok-free.app"
 
-                        ]
+]
 DIALOGFLOW_BASE_URL = (
     "https://us-central1-dialogflow.googleapis.com/v3beta1/projects/boostedchatapi/locations/us-central1/"
 )

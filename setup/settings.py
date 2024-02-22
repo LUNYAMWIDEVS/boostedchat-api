@@ -232,7 +232,6 @@ CORS_ALLOWED_ORIGINS = [
     "http://booksy.us.boostedchat.com",
     "https://booksy.us.boostedchat.com",
     "https://jamel.boostedchat.com"
-    "https://jamel.boostedchat.com"
 ]
 
 CORS_ALLOW_HEADERS = (

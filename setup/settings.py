@@ -219,7 +219,7 @@ REST_AUTH = {
 
 CORS_ALLOWED_ORIGINS = [
     f"https://{os.environ.get('DOMAIN1', '')}.boostedchat.com",
-    f"https://{os.environ.get('DOMAIN12', '')}.boostedchat.com",
+    f"https://{os.environ.get('DOMAIN2', '')}.boostedchat.com",
     "http://localhost:8080",
     "http://127.0.0.1:9000",
     "http://localhost:9000",

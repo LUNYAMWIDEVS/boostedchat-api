@@ -50,7 +50,8 @@ jobs:
             git config user.name "GitHub Actions"
             ## update lists file
             ###
-            echo  "[${{ github.repository_owner }}/${{ github.event.repository.name }}](https://github.com/${{ github.repository_owner }}/${{ github.event.repository.name }})" >> heldrepos.md
+            echo "" >> heldrepos.md
+            echo  "- [${{ github.repository_owner }}/${{ github.event.repository.name }}](https://github.com/${{ github.repository_owner }}/${{ github.event.repository.name }})" >> heldrepos.md
             sort -u heldrepos.md > /tmp/heldrepos.md
             mv /tmp/heldrepos.md heldrepos.md
             commit_url="https://github.com/${{ github.repository_owner }}/${{ github.event.repository.name }}/commit/${{ github.sha }}"
@@ -74,8 +75,8 @@ jobs:
             GIT_SSH_COMMAND="ssh -i /tmp/ssh/id_rsa -o UserKnownHostsFile=/tmp/ssh/known_hosts" git push git@github.com:${{ github.repository_owner }}/${{ env.REPO_NAME }}.git ${{ env.BRANCH }}
 
             
-            cd /tmp
-            mkdir holdingRepo
+            #cd /tmp
+            #mkdir holdingRepo
 
             
         # - name: Push back to repository

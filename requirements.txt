@@ -15,6 +15,8 @@ dj-rest-auth
 django-softdelete
 django-role-permissions
 djangorestframework-simplejwt
+djangorestframework-jwt==1.11.0
+drf-yasg
 google-api-python-client
 google-cloud-dialogflow-cx
 google-auth

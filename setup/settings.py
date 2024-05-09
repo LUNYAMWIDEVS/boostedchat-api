@@ -77,6 +77,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django_celery_beat",
+    "drf_yasg",
     "corsheaders",
     "rest_framework",
     "rest_framework.authtoken",
@@ -102,8 +103,26 @@ INSTALLED_APPS = [
     "allauth.socialaccount.providers.facebook",
     "allauth.socialaccount.providers.twitter",
     "outreaches",
+    "channels",
     "exceptions"
 ]
+
+SWAGGER_SETTINGS = {
+    # 'SECURITY_DEFINITIONS': {
+    #     'Basic': {
+    #         'type': 'basic'
+    #     }
+    # }
+    'SECURITY_DEFINITIONS': {
+        'Bearer': {
+        # 'Token':{
+            'type': 'apiKey',
+            'name': 'Authorization',
+            'in': 'header'
+        }
+    },
+    'USE_SESSION_AUTH': False,
+}
 
 MIDDLEWARE = [
     "dialogflow.middleware.RequestCounterMiddleware",
@@ -214,7 +233,7 @@ SOCIALACCOUNT_PROVIDERS = {
     }
 }
 
-REST_FRAMEWORK = {"DEFAULT_AUTHENTICATION_CLASSES": ("dj_rest_auth.jwt_auth.JWTCookieAuthentication",), "PAGE_SIZE": 10}
+REST_FRAMEWORK = {"DEFAULT_AUTHENTICATION_CLASSES": ("dj_rest_auth.jwt_auth.JWTCookieAuthentication",'rest_framework_simplejwt.authentication.JWTAuthentication',), "PAGE_SIZE": 10}
 
 REST_AUTH = {
     "USE_JWT": True,

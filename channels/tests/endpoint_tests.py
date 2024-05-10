@@ -1,4 +1,4 @@
-from django.test import TestCase
+# from django.test import TestCase
 from rest_framework.test import APIRequestFactory
 from rest_framework import status
 from channels.views import * 
@@ -7,34 +7,42 @@ from rest_framework_simplejwt.tokens import AccessToken
 from channels.models import *
 from datetime import datetime, date, time, timedelta
 from colorama import Fore, Style, init
+from .utils import *
 
 # import base64
 
-class ChannelsViewSetTestCase(TestCase):
+# class ChannelsViewSetTestCase(TestUtils):
+#     def setUp(self):
+#         self.factory = APIRequestFactory()
+#         self.view = ChannelsViewSet.as_view({'get': 'list'})
+#         User = get_user_model() 
+#         self.user = User.objects.create_user(email='testuser@example.com', password='testpassword')
+#         self.token = AccessToken.for_user(self.user)
+#         self.header = {"HTTP_AUTHORIZATION": f'Bearer {str(self.token)}'}
+
+
+#     def test_list_channels(self):
+#         describe = "Testing endpoint for Listing Channels"
+#         level = 0
+
+#         self.describe(describe,level)
+
+#         header = {"HTTP_AUTHORIZATION": f'Bearer {str(self.token)}'}
+#         request = self.factory.get('/channels/', **header)
+#         response = self.view(request)
+#         should = "Return status 200"
+#         self.localTest(
+#             self.assertEqual,
+#             response.status_code, 
+#             status.HTTP_200_OK,
+#             should=should,
+#             level=level
+#             )
+
+class ChannelUserNameViewSetTestCase(TestUtils):
     def setUp(self):
         self.factory = APIRequestFactory()
-        self.view = ChannelsViewSet.as_view({'get': 'list'})
-        User = get_user_model() 
-        self.user = User.objects.create_user(email='testuser@example.com', password='testpassword')
-        self.token = AccessToken.for_user(self.user)
-        self.header = {"HTTP_AUTHORIZATION": f'Bearer {str(self.token)}'}
-
-
-    def test_list_channels(self):
-        print(Fore.BLUE + "Testing list channels")
-        try:
-            header = {"HTTP_AUTHORIZATION": f'Bearer {str(self.token)}'}
-            request = self.factory.get('/channels/', **header)
-            response = self.view(request)
-            self.assertEqual(response.status_code, status.HTTP_200_OK)
-            print(Fore.GREEN + "\t✓ Test passed: list channels")
-        except AssertionError:
-            print(Fore.RED + "\t✗ Test failed: list channels")
-
-class ChannelUserNameViewSetTestCase(TestCase):
-    def setUp(self):
-        self.factory = APIRequestFactory()
-        self.view = ChannelUserNameViewSet.as_view({'post': 'create', 'get':'list'})  # Assuming 'create' is the action name in your viewset
+        self.view = ChannelUserNameViewSet.as_view({'post': 'create', 'get':'list', 'patch':'update'})
         channels = helpers.channelsList()
         channels_string = ','.join(channels)
         self.missing_channel = {}
@@ -46,184 +54,415 @@ class ChannelUserNameViewSetTestCase(TestCase):
         self.user = User.objects.create_user(email='testuser@example.com', password='testpassword')
         self.token = AccessToken.for_user(self.user)
 
-    # POST
-    def test_create_valid_data(self):
-        # test invalid channel
-        print(Fore.BLUE + "Testing create channel usernames")
-        try:
-            header = {"HTTP_AUTHORIZATION": f'Bearer {str(self.token)}'}
-            request = self.factory.post('/', self.missing_channel, format='json', **header)
-            response = self.view(request)
-            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-            print(Fore.GREEN + "\t✓ Test passed: invalid channel")
-        except AssertionError:
-            print(Fore.RED + "\t✗ Test failed: invalid channel")
-        try:
-            request = self.factory.post('/', self.invalid_channel, format='json', **header)
-            response = self.view(request)
-            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-            print(Fore.GREEN + "\t✓ Test passed: invalid channel")
-        except AssertionError:
-            print(Fore.RED + "\t✗ Test failed: invalid channel")
-        try:
-            request = self.factory.post('/', self.empty_channel, format='json', **header)
-            response = self.view(request)
-            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-            print(Fore.GREEN + "\t✓ Test passed: empty channel")
-        except AssertionError:
-            print(Fore.RED + "\t✗ Test failed: empty channel")
-        try:
-            request = self.factory.post('/', self.number_channel, format='json', **header)
-            response = self.view(request)
-            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-            print(Fore.GREEN + "\t✓ Test passed: number channel")
-        except AssertionError:
-            print(Fore.RED + "\t✗ Test failed: number channel")
-        # test all valid channels
-        channels = helpers.channelsList()
-        for channel in channels:
-            channel = channel.upper()
+    # # POST
+    # def test_creating_channel_usernames(self):
+    #     level = 0
+    #     describe = "Testing endpoint for Creating Channel UserNames"
+    #     self.describe(describe, level)
+    #     header = {"HTTP_AUTHORIZATION": f'Bearer {str(self.token)}'}
+    #     # test invalid channel
+    #     level = 1
+    #     describe = "Testing Creating Without Supplying Channel"
+    #     self.describe(describe, level)
+    #     should = "Return status 400"
+    #     request = self.factory.post('/', self.missing_channel, format='json', **header)
+    #     response = self.view(request)
+    #     self.localTest(
+    #         self.assertEqual,
+    #         response.status_code,
+    #         status.HTTP_400_BAD_REQUEST,
+    #         should=should,
+    #         level=level
+    #         )
+
+    #     describe = "Testing Creating Using Invalid Channel"
+    #     self.describe(describe, level)
+    #     should = "Return status 400"
+    #     request = self.factory.post('/', self.invalid_channel, format='json', **header)
+    #     response = self.view(request)
+
+    #     self.localTest(
+    #         self.assertEqual,
+    #         response.status_code,
+    #         status.HTTP_400_BAD_REQUEST,
+    #         should=should,
+    #         level=level
+    #         )
+    #     describe = "Testing Creating Using Empty value for Channel"
+    #     self.describe(describe, level)
+    #     should = "Return status 400"
+    #     request = self.factory.post('/', self.empty_channel, format='json', **header)
+    #     response = self.view(request)
         
-            valid_data = {'channel': channel, 'username': f'{channel}-example_username', 'status1': 'active', 'status2': 'inactive', 'status3': 'pending', 'status4': 'completed', 'sandbox': True}
-            request = self.factory.post('/', valid_data, format='json', **header)
-            response = self.view(request)
-            try:
-                self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-                print(Fore.GREEN + f"\t✓ Test passed: valid data: {channel}-example_username")
-            except AssertionError:
-                print(Fore.RED + f"\t✗ Test failed: valid data: {channel}-example_username")
 
-        # test duplicate usernames
-        try:
-            valid_data = {'channel': 'whatsapp', 'username': 'whatsapp-duplicate-example_username', 'status1': 'active', 'status2': 'inactive', 'status3': 'pending', 'status4': 'completed', 'sandbox': True}
-            request = self.factory.post('/', valid_data, format='json', **header)
-            response = self.view(request)
-            valid_data = {'channel': 'whatsapp', 'username': 'whatsapp-duplicate-example_username', 'status1': 'active', 'status2': 'inactive', 'status3': 'pending', 'status4': 'completed', 'sandbox': True}
-            request = self.factory.post('/', valid_data, format='json', **header)
-            response = self.view(request)
-            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-            print(Fore.GREEN + "\t✓ Test passed: duplicate usernames")
-        except AssertionError:
-            print(Fore.RED + "\t✗ Test failed: duplicate usernames")
-
-    # list
-    def test_list_function(self):
-        print(Fore.BLUE + "Testing list channel usernames")
-        header = {"HTTP_AUTHORIZATION": f'Bearer {str(self.token)}'}
-        # test with missing channel
-        try:
-            request = self.factory.get('/', **header)
-            response = self.view(request)
-            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-            print(Fore.GREEN + "\t✓ Test passed: missing channel")
-        except AssertionError:
-            print(Fore.RED + "\t✗ Test failed: missing channel")
+    #     self.localTest(
+    #         self.assertEqual,
+    #         response.status_code,
+    #         status.HTTP_400_BAD_REQUEST,
+    #         should=should,
+    #         level=level
+    #         )
         
-        # test with wrong channel
-        try:
-            wrong_channel = 'wrongchannel_not_in_list'
-            request = self.factory.get('/', **header, data={'channel': wrong_channel})
-            response = self.view(request)
-            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-            print(Fore.GREEN + "\t✓ Test passed: wrong channel")
-        except AssertionError:
-            print(Fore.RED + "\t✗ Test failed: wrong channel")
+    #     describe = "Testing Creating Using Numerical value for Channel"
+    #     self.describe(describe, level)
+    #     should = "Return status 400"
+    #     request = self.factory.post('/', self.number_channel, format='json', **header)
+    #     response = self.view(request)
+
+    #     self.localTest(
+    #         self.assertEqual,
+    #         response.status_code,
+    #         status.HTTP_400_BAD_REQUEST,
+    #         should=should,
+    #         level=level
+    #         )
+
         
-        # test with correct channels
-        channels = helpers.channelsList()
-        for channel in channels:
-            # create usernames
-            for i in range(1, 10):
-                valid_data = {'channel': channel, 'username': f'{channel}-{i}-example_username', 'status1': 'active', 'status2': 'inactive', 'status3': 'pending', 'status4': 'completed', 'sandbox': True}
-                request = self.factory.post('/', valid_data, format='json', **header)
-                response = self.view(request)            
 
-            request = self.factory.get(f'/?channel={channel}', **header)
-            channelUserNames = helpers_circular.getChannelUserNameModel(channel.lower())
-            response = self.view(request)
-            try:
-                self.assertEqual(response.status_code, status.HTTP_200_OK)
-                self.assertEqual(len(response.data), 9)
-                print(Fore.GREEN + f"\t✓ Test passed: correct channel: {channel}")
-            except AssertionError:
-                print(Fore.RED + f"\t✗ Test failed: correct channel: {channel}")
+    #     # test upercanse
+    #     # test lowercase
+    #     describe = "Testing Case Insensitivity of channel names"
+    #     self.describe(describe, level)
+    #     should = "Return status 201"
+    #     channels = helpers.channelsList()
+    #     channel = channels[0]
 
-            expected_data = channelUserNames.objects.all()
-            expected_data = ChannelUserNamesReadSerializer(expected_data, many=True).data
+    #     data = {'channel': channel.lower(), 'username':"lowercase"}
+    #     request = self.factory.post('/', data, format='json', **header)
+    #     response = self.view(request)
+    #     should = f"Return 201 for lowercase({channel.lower()})"
 
-            retrieved_data = response.data
-            try:
-                self.assertEqual(retrieved_data, expected_data)
-                print(Fore.GREEN + f"\t✓ Test passed: Created correct data for: {channel}")
-            except AssertionError:
-                print(Fore.RED + f"\t✗ Test failed: Created correct data for: {channel}")
+    #     self.localTest(
+    #         self.assertEqual,
+    #         response.status_code,
+    #         status.HTTP_201_CREATED,
+    #         should=should,
+    #         level=level
+    #         )
+    #     data = {'channel': channel.upper(), 'username':"uppercase"}
+    #     request = self.factory.post('/', data, format='json', **header)
+    #     response = self.view(request)
+    #     should = f"Return 201 for UPPERCASE({channel.upper()})"
+    #     self.localTest(
+    #         self.assertEqual,
+    #         response.status_code,
+    #         status.HTTP_201_CREATED,
+    #         should=should,
+    #         level=level
+    #         )
 
-    def test_create_and_filter_channel_usernames(self):
-        print(Fore.BLUE + "Testing create and filter channel usernames")
-        # Create channel usernames
-        header = {"HTTP_AUTHORIZATION": f'Bearer {str(self.token)}'}
-        try:
-            data = {'channel':'whatsapp','username': 'user1', 'status1': 'active'}
-            request = self.factory.post('/', data, format='json', **header)
-            response = self.view(request)
-            self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-            print(Fore.GREEN + f"\t✓ Test passed: create channel usernames user1")
-        except AssertionError:
-            print(Fore.RED + f"\t✗ Test failed: create channel usernames user1")
+    #     describe = "Testing Creating UserNames for All Valid Channels"
+    #     self.describe(describe, level)
+
+    #     channels = helpers.channelsList()
+    #     for channel in channels:
+    #         valid_data = {'channel': channel, 'username': f'{channel}-example_username', 'status1': 'active', 'status2': 'inactive', 'status3': 'pending', 'status4': 'completed', 'sandbox': True}
+    #         request = self.factory.post('/', valid_data, format='json', **header)
+    #         response = self.view(request)
+    #         should = f"Return 201 for {channel}"
+    #         self.localTest(
+    #             self.assertEqual,
+    #             response.status_code,
+    #             status.HTTP_201_CREATED,
+    #             should=should,
+    #             level=level
+    #             )
+            
+    #     describe = "Test creation with duplicate usernames"
+    #     self.describe(describe, level)
+    #     for channel in channels:
+    #         valid_data = {'channel': channel, 'username': f'{channel}-duplicate-example_username', 'status1': 'active', 'status2': 'inactive', 'status3': 'pending', 'status4': 'completed', 'sandbox': True}
+    #         request = self.factory.post('/', valid_data, format='json', **header)
+    #         response = self.view(request) # create it the first time
+    #         should = f"Return 200 for creating {channel}-duplicate-example_username in {channel}"
+    #         self.localTest(
+    #             self.assertEqual,
+    #             response.status_code,
+    #             status.HTTP_201_CREATED,
+    #             should=should,
+    #             level=level
+    #             )
+    #         request = self.factory.post('/', valid_data, format='json', **header)
+    #         response = self.view(request)
+    #         should = f"Return 400 for duplicate {channel}-duplicate-example_username in {channel}"
+    #         self.localTest(
+    #             self.assertEqual,
+    #             response.status_code,
+    #             status.HTTP_400_BAD_REQUEST,
+    #             should=should,
+    #             level=level
+    #             )
+    # def test_fetch_function(self):
+    #     level = 0
+    #     describe = "Test endpoint for reading channel usernames"
+    #     self.describe(describe, level)
+    #     header = {"HTTP_AUTHORIZATION": f'Bearer {str(self.token)}'}
+
+    #     level = 1
+    #     describe = "Fetch using a wrong channel"
+    #     self.describe(describe, level)
+    #     wrong_channel = 'wrongchannel_not_in_list'
+    #     request = self.factory.get('/', **header, data={'channel': wrong_channel})
+    #     response = self.view(request)
+    #     should = "Return 400 for wrong channel"
+    #     self.localTest(
+    #         self.assertEqual,
+    #         response.status_code,
+    #         status.HTTP_400_BAD_REQUEST,
+    #         should=should,
+    #         level=level
+    #     )
+
+    #     describe = "Fetch without supplying channel"
+    #     self.describe(describe, level)
+    #     request = self.factory.get('/', **header)
+    #     response = self.view(request)
+    #     should = "Return 400 for missing channel"
+    #     self.localTest(
+    #         self.assertEqual,
+    #         response.status_code,
+    #         status.HTTP_400_BAD_REQUEST,
+    #         should=should,
+    #         level=level
+    #     )
+
+
+    #     describe = "Fetch for all valid channels"
+    #     self.describe(describe, level)
+    #     channels = helpers.channelsList()
+
+    #     for channel in channels:
+    #         for i in range(1, 10):
+    #             valid_data = {'channel': channel, 'username': f'{channel}-{i}-example_username', 'status1': 'active', 'status2': 'inactive', 'status3': 'pending', 'status4': 'completed', 'sandbox': True}
+    #             request = self.factory.post('/', valid_data, format='json', **header)
+    #             response = self.view(request)            
+
+    #         request = self.factory.get(f'/?channel={channel}', **header)
+    #         channelUserNames = helpers_circular.getChannelUserNameModel(channel.lower())
+    #         response = self.view(request)
+    #         # Check if the status code is 200 OK
+    #         should = f"Return 200 for successful fetch in {channel}"
+    #         self.localTest(
+    #             self.assertEqual,
+    #             response.status_code,
+    #             status.HTTP_200_OK,
+    #             should=should,
+    #             level=level
+    #         )
+    #         should = f"Return 9 records for {channel}"
+    #         self.localTest(
+    #             self.assertEqual,
+    #             len(response.data),
+    #             9,
+    #             should=should,
+    #             level=level
+    #         )
+
+    #         expected_data = channelUserNames.objects.all()
+    #         expected_data = ChannelUserNamesReadSerializer(expected_data, many=True).data
+    #         retrieved_data = response.data
+
+    #         should = f"Retrieved data should be the same as that which was saved for {channel}"
+    #         self.localTest(
+    #             self.assertEqual,
+    #             retrieved_data,
+    #             expected_data,
+    #             should=should,
+    #             level=level
+            # )
+       
+
+
+#     def test_test_fetch_function_with_filters(self):
+# #         # Create channel usernames
+#         describe = "Test fetching using filters"
+#         level = 0
+#         self.describe(describe, level)
+#         header = {"HTTP_AUTHORIZATION": f'Bearer {str(self.token)}'}
+
+#         data = {'channel':'whatsapp','username': 'user1', 'status1': 'active'}
+#         request = self.factory.post('/', data, format='json', **header)
+#         response = self.view(request)
+#         response_data = response.data
+#         id1 = response_data.get('data', {}).get('id')
+#         data = {'channel':'whatsapp','username': 'user2', 'status1': 'inactive'}
+#         request = self.factory.post('/', data, format='json', **header)
+#         response = self.view(request)
+#         response_data = response.data
+#         id2 = response_data.get('data', {}).get('id')
+#         data = {'channel':'whatsapp','username': 'user3', 'status1': 'active'}
+#         request = self.factory.post('/', data, format='json', **header)
+#         response = self.view(request)
+#         response_data = response.data
+#         id3 = response_data.get('data', {}).get('id')
+
+#         # rest filtering by status
+#         level = 1
+#         describe = "Test filtering by status"
+#         self.describe(describe, level)
+#         request = self.factory.get('/', **header, data={'channel': 'whatsapp', 'status1': 'active'})
+#         response = self.view(request)
+#         should = "Return 200 for status=active"
+#         self.localTest(
+#             self.assertEqual,
+#             response.status_code, 
+#             status.HTTP_200_OK,
+#             should=should,
+#             level=level
+#         )
+#         should = "Return 2 values for status=active"
+#         self.localTest(
+#             self.assertEqual,
+#             len(response.data),
+#             2, 
+#             should=should,
+#             level=level
+#         )
         
-        try:
-            data = {'channel':'whatsapp','username': 'user2', 'status1': 'inactive'}
-            request = self.factory.post('/', data, format='json', **header)
-            response = self.view(request)
-            self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-            print(Fore.GREEN + f"\t✓ Test passed: create channel usernames user2")
-        except AssertionError:
-            print(Fore.RED + f"\t✗ Test failed: create channel usernames user2")
-
-        try:
-            data = {'channel':'whatsapp','username': 'user3', 'status1': 'active'}
-            request = self.factory.post('/', data, format='json', **header)
-            response = self.view(request)
-            self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-            print(Fore.GREEN + f"\t✓ Test passed: create channel usernames user3")
-        except AssertionError:
-            print(Fore.RED + f"\t✗ Test failed: create channel usernames user3")
-
+        
+#         request = self.factory.get('/', **header, data={'channel': 'whatsapp', 'status1': 'inactive'})
+#         response = self.view(request)
+#         should = "Return 1 value for status=inactive"
+#         self.localTest(
+#             self.assertEqual,
+#             len(response.data),
+#             1, 
+#             should=should,
+#             level=level
+#         )
+#         should = "Value of status1 = inactive"
+#         for username in response.data:
+#             self.localTest(
+#                 self.assertEqual,
+#                 username['status1'],
+#                'inactive', 
+#                 should=should,
+#                 level=level
+#             )
+        
+#         describe = "Test Filtering by Id"
+#         ids = [id1, id2, id3]
+#         for id in ids:
+#             request = self.factory.get('/', **header, data={'channel': 'whatsapp', 'id': id})
+#             response = self.view(request)
+#             should = f"Return 1 value for {id}"
+#             self.localTest(
+#                 self.assertEqual,
+#                 len(response.data),
+#                 1, 
+#                 should=should,
+#                 level=level
+#             )
+#             should = f"Return id = {id}"
+#             for username in response.data:
+#                 self.localTest(
+#                     self.assertEqual,
+#                     username['id'],
+#                     id, 
+#                     should=should,
+#                     level=level
+#                 )
             
 
-        # # Test filtering by status
-        try:
-            request = self.factory.get('/', **header, data={'channel': 'whatsapp', 'status1': 'active'})
-            response = self.view(request)
-            self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertEqual(len(response.data), 2)
-            for username in response.data:
-                self.assertEqual(username['status1'], 'active')
-            print(Fore.GREEN + f"\t✓ Test passed: filter by status1 active")
-        except AssertionError:
-            print(Fore.RED + f"\t✗ Test failed: filter by status1 active")
-
-        try:
-            request = self.factory.get('/', **header, data={'channel': 'whatsapp', 'status1': 'inactive'})
-            response = self.view(request)
-            self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertEqual(len(response.data), 1)
-            for username in response.data:
-                self.assertEqual(username['status1'], 'inactive')
-            print(Fore.GREEN + f"\t✓ Test passed: filter by status1 inactive")
-        except AssertionError:
-            print(Fore.RED + f"\t✗ Test failed: filter by status1 inactive")
 
 
-        # Test filtering by username
-        try:
-            request = self.factory.get('/', **header, data={'channel': 'whatsapp', 'username': 'user2'})
+#         # Test filtering by username
+#         describe = "Test filtering by username"
+#         self.describe(describe, level)
+
+#         request = self.factory.get('/', **header, data={'channel': 'whatsapp', 'username': 'user2'})
+#         response = self.view(request)
+#         should = "Return 200 for successful filter by username"
+#         self.localTest(
+#             self.assertEqual,
+#             response.status_code,
+#             status.HTTP_200_OK,
+#             should=should,
+#             level=level
+#         )
+
+#         should = "Return one item when filtering by username"
+#         self.localTest(
+#             self.assertEqual,
+#             len(response.data),
+#             1,
+#             should=should,
+#             level=level
+#         )
+
+#         should = "Return correct username when filtering by username"
+#         self.localTest(
+#             self.assertEqual,
+#             response.data[0]['username'],
+#             'user2',
+#             should=should,
+#             level=level
+#         )
+
+    def test_test_update_function(self):
+        level = 0
+        describe = "Testing update function"
+        self.describe(describe, level)
+        header = {"HTTP_AUTHORIZATION": f'Bearer {str(self.token)}'}
+        channels = helpers.channelsList()
+
+        # Create records
+        for channel in channels:
+            valid_data = {'channel': channel, 'username': f'{channel}-example_username', 'status': 'active', 'sandbox': True}
+            request = self.factory.post('/', valid_data, format='json', **header)
             response = self.view(request)
-            self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertEqual(len(response.data), 1)
-            self.assertEqual(response.data[0]['username'], 'user2')
-            print(Fore.GREEN + f"\t✓ Test passed: filter by username user2")
-        except AssertionError:
-            print(Fore.RED + f"\t✗ Test failed: filter by username user2")
-    
+        level = 1
+        describe = "Testing if inactive status is changed to active when changed one by one"
+        self.describe(describe, level)
+        # Update records
+        for channel in channels:
+            valid_data = {'channel': channel, 'username': f'{channel}-example_username', 'status': 'inactive', 'sandbox': True, "filters":{"status":"active"}}
+            request = self.factory.patch('/', valid_data, format='json', **header)
+            response = self.view(request)
+            print(response.data)
+
+            # Check if the status code is 200 OK
+            should = f"Return 200 for successful update in {channel}"
+            self.localTest(
+                self.assertEqual,
+                response.status_code,
+                status.HTTP_200_OK,
+                should=should,
+                level=level
+            )
+
+            # Check if the status of the updated record is 'inactive'
+            should = f"Return 'inactive' status for updated record in {channel}"
+            self.localTest(
+                self.assertEqual,
+                response.data['status'],
+                'inactive',
+                should=should,
+                level=level
+            )
+        ## Update all records where status is 'inactive'
+        # valid_data = {'filters': {'status': 'inactive'}, 'status': 'active', 'sandbox': True}
+        # request = self.factory.put('/', valid_data, format='json', **header)
+        # response = self.view(request)
+
+        # # Check if the status code is 200 OK
+        # should = "Return 200 for successful update of all inactive records"
+        # self.localTest(
+        #     self.assertEqual,
+        #     response.status_code,
+        #     status.HTTP_200_OK,
+        #     should=should,
+        #     level=level
+        # )
+
+        # # Check if the status of the updated records is 'active'
+        # for item in response.data:
+        #     should = "Return 'active' status for updated records"
+        #     self.localTest(
+        #         self.assertEqual,
+        #         item['status'],
+        #         'active',
+        #         should=should,
+        #         level=level
+        #     )
         

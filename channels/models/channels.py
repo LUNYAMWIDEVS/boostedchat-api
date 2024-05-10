@@ -18,7 +18,7 @@ class ChannelManager:
             params (dict, optional): A dictionary containing username and status information.
                 Defaults to {}.
         """
-        _, username, status1, status2, status3, sandbox = helpers.getChannelUserNameParams(params)
+        _, username, status1, status2, status3, sandbox, _ = helpers.getChannelUserNameParams(params)
         
         recordExists = self.ChannelUserNames.objects.filter(username=username ).exists()
         record_is_deleted = self.ChannelUserNames.objects.all_with_deleted().filter(username=username).exists()
@@ -77,15 +77,17 @@ class ChannelManager:
             return None
 
     def update_channel_username(self, params = {}):
-        _, username, status1, status2, status3, sandbox=helpers.getChannelUserNameParams(params, action="update")
-        channel_username = self.read_channel_username(username)
-        if channel_username:
-            model_fields = {field.name for field in self.ChannelUserNames._meta.get_fields()}  # Get model field names
-            for field, value in params.items():
-                if value is not None and field in model_fields:  # Check for non-None value and valid field
-                    setattr(channel_username, field, value)
-            channel_username.save()
-            return True
+        _, username, status1, status2, status3, sandbox, filters = helpers.getChannelUserNameParams(params, action="update")
+        print(filters)
+        channel_usernames = self.read_channel_usernames(filters) # user filters here
+        for channel_username in channel_usernames:
+            if channel_username:
+                model_fields = {field.name for field in self.ChannelUserNames._meta.get_fields()}  # Get model field names
+                for field, value in params.items():
+                    if value is not None and field in model_fields:  # Check for non-None value and valid field
+                        setattr(channel_username, field, value)
+                channel_username.save()
+                return True
         return False
 
     def delete_channel_username(self, username):

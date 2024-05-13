@@ -23,6 +23,7 @@ class ChannelUserNameViewSet(viewsets.ModelViewSet):
         serializerClass = ChannelUserNameSerializer if self.action == "create" else serializerClass
         serializerClass = ChannelUserNameFilterSerializer if self.action == "list" else serializerClass
         serializerClass = ChannelUserNamePatchSerializer if self.action == "update" else serializerClass
+        serializerClass = ChannelUserNameDeleteSerializer if self.action == "destroy" else serializerClass
         
         return serializerClass
     
@@ -35,7 +36,7 @@ class ChannelUserNameViewSet(viewsets.ModelViewSet):
             validated_data = serializer.validated_data
             try:
                 result = LocalChannelManager.save_channel_username(validated_data)
-                result = ChannelUserNameResponseSerializer(result, many=False).data
+                result = ChannelUserNamesReadSerializer(result, many=False).data
                 return Response({'message': 'Channel username created successfully', 'data': result}, status=status.HTTP_201_CREATED)
                 # response_data = {
                 #     'message': 'Channel username created successfully',
@@ -64,92 +65,35 @@ class ChannelUserNameViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
             LocalChannelManager = ChannelManager(serializer.validated_data['channel'])
-            LocalChannelManager.update_channel_username(serializer.validated_data)
-            print(serializer.validated_data["filters"])
-            return Response({'error': 'Username already exists'}, status=status.HTTP_400_BAD_REQUEST)
+            result = LocalChannelManager.update_channel_username(serializer.validated_data)
+            # return Response({'error': 'Record updated'}, status=status.HTTP_200_OK)
+            result = ChannelUserNamesReadSerializer(result, many=True).data
+            return Response({'message': 'Channel username updated successfully', 'data': result}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        # ChannelUserNameModel = helpers_circular.getChannelUserNameModel(channel)
-        # if ChannelUserNameModel is None:
-        #     return Response({'message': 'Channel not supported'}, status=status.HTTP_400_BAD_REQUEST)
-        
-        # try:
-        #     channel_username = ChannelUserNameModel.objects.get(pk=pk)
-        # except ChannelUserNameModel.DoesNotExist:
-        #     return Response({'error': 'Channel username not found'}, status=status.HTTP_404_NOT_FOUND)
-        
-        # serializer = self.serializer_class(channel_username, data=request.data)
-        # if serializer.is_valid():
-        #     serializer.save()
-        #     return Response({'message': 'Channel username updated successfully'})
-        # return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    # def destroy(self, request, pk=None):
-    #     channel = request.query_params.get('channel')
-    #     if not channel:
-    #         return Response({'error': 'Channel parameter is required'}, status=status.HTTP_400_BAD_REQUEST)
-        
-    #     ChannelUserNameModel = self.getChannelUserNameModel(channel)
-    #     if ChannelUserNameModel is None:
-    #         return Response({'message': 'Channel not supported'}, status=status.HTTP_400_BAD_REQUEST)
-        
-    #     try:
-    #         channel_username = ChannelUserNameModel.objects.get(pk=pk)
-    #     except ChannelUserNameModel.DoesNotExist:
-    #         return Response({'error': 'Channel username not found'}, status=status.HTTP_404_NOT_FOUND)
-        
-    #     channel_username.delete()
-    #     return Response({'message': 'Channel username deleted successfully'})
-
-    # def retrieve(self, request, pk=None):
-    #     channel = request.query_params.get('channel')
-    #     if not channel:
-    #         return Response({'error': 'Channel parameter is required'}, status=status.HTTP_400_BAD_REQUEST)
-        
-    #     ChannelUserNameModel = self.getChannelUserNameModel(channel)
-    #     if ChannelUserNameModel is None:
-    #         return Response({'message': 'Channel not supported'}, status=status.HTTP_400_BAD_REQUEST)
-        
-    #     try:
-    #         channel_username = ChannelUserNameModel.objects.get(pk=pk)
-    #     except ChannelUserNameModel.DoesNotExist:
-    #         return Response({'error': 'Channel username not found'}, status=status.HTTP_404_NOT_FOUND)
-        
-    #     serializer = self.serializer_class(channel_username)
-    #     return Response(serializer.data)
-
-
-
-
-
-
-    #     channel_username = ChannelUserName.objects.get(pk=pk)
-    #     serializer = self.serializer_class(channel_username)
-    #     return Response(serializer.data)
-
-    # def update(self, request, pk=None):
-    #     channel_username = ChannelUserName.objects.get(pk=pk)
-    #     serializer = self.serializer_class(channel_username, data=request.data)
-    #     if serializer.is_valid():
-    #         serializer.save()
-    #         return Response({'message': 'Channel username updated successfully'})
-    #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    # def destroy(self, request, pk=None):
-    #     channel_username = ChannelUserName.objects.get(pk=pk)
-    #     channel_username.delete()
-    #     return Response({'message': 'Channel username deleted successfully'})
-"""
-Create a viewset for each channel
-"""
-class InstagramViewSet(viewsets.ViewSet):
-    permission_classes = [IsAuthenticated]
-    def list(self, request):
-        # return array of strings
-        return Response(["instagram", "whatsapp", "linkedIn", "sandbox"])
     
-    def create(self, request):
-        serializer = ChannelUserNameSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        validated_data = serializer.validated_data
-        # create or update
-        return Response({"message": "success"})
+    # endpoint to delete a channel username
+    def destroy(self, request, pk=None):
+        serializer = self.get_serializer(data=request.query_params)
+        if serializer.is_valid():
+            LocalChannelManager = ChannelManager(serializer.validated_data['channel'])
+            filters = {"id": serializer.validated_data['id']}
+            result = LocalChannelManager.delete_channel_username(filters)
+            return Response({'message': 'Channel username deleted successfully'}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# """
+# Create a viewset for each channel
+# """
+# class InstagramViewSet(viewsets.ViewSet):
+#     permission_classes = [IsAuthenticated]
+#     def list(self, request):
+#         # return array of strings
+#         return Response(["instagram", "whatsapp", "linkedIn", "sandbox"])
+    
+#     def create(self, request):
+#         serializer = ChannelUserNameSerializer(data=request.data)
+#         serializer.is_valid(raise_exception=True)
+#         validated_data = serializer.validated_data
+#         # create or update
+#         return Response({"message": "success"})

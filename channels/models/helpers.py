@@ -2,6 +2,7 @@ class helpers:
 
     @staticmethod
     def getChannelUserNameParams(params = {}, action = "read"):
+        id = params.get('id', None)
         channel = params.get('channel', None)
         status1 = params.get('status1', None)
         status2 = params.get('status2', None)
@@ -12,7 +13,7 @@ class helpers:
         if action == "read": # set default value for read
             if sandbox is None:
                 sandbox = False
-        return (channel, username, status1, status2, status3, sandbox, filters)
+        return (channel, id, username, status1, status2, status3, sandbox, filters)
     
     @staticmethod
     def channelsList():

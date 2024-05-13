@@ -17,7 +17,7 @@ from .views import *
 router = DefaultRouter()
 router.register(r'channels', ChannelsViewSet, basename='channels')
 router.register(r'channelusernames', ChannelUserNameViewSet, basename='channelusernames')
-router.register(r'instagram', InstagramViewSet, basename='instagram')
+# router.register(r'instagram', InstagramViewSet, basename='instagram')
 
 
 urlpatterns = [

@@ -13,6 +13,7 @@ class ChannelSSerializer(serializers.Serializer):
             raise serializers.ValidationError("Channel must be one of the following: " + str(helpers.channelsList()))
         return channel
 
+# /POST with channel
 class ChannelUserNameSerializer(ChannelSSerializer):
     username = serializers.CharField(required=True) # username to be saved
     status1 = serializers.CharField(required=False)
@@ -21,6 +22,7 @@ class ChannelUserNameSerializer(ChannelSSerializer):
     status4 = serializers.CharField(required=False)
     sandbox = serializers.BooleanField(required=False, allow_null=True, default=None) # we do not want this to defaul to False
 
+# /GET with channel
 class ChannelUserNameFilterSerializer(ChannelSSerializer):
     id = serializers.CharField(required=False)
     username = serializers.CharField(required=False)
@@ -30,16 +32,8 @@ class ChannelUserNameFilterSerializer(ChannelSSerializer):
     status4 = serializers.CharField(required=False)
     sandbox = serializers.BooleanField(required=False, allow_null=True, default=None) # we do not want this to defaul to False
 
-class ChannelUserNameResponseSerializer(serializers.Serializer):
-    id = serializers.CharField(required=False)
-    username = serializers.CharField(required=False)
-    status1 = serializers.CharField(required=False)
-    status2 = serializers.CharField(required=False)
-    status3 = serializers.CharField(required=False)
-    status4 = serializers.CharField(required=False)
-    sandbox = serializers.BooleanField(required=False, allow_null=True, default=None) # we do not want this to defaul to False
-     
-class ChannelUserNamePatchSerializer(serializers.Serializer):
+# /PATCH with channel
+class ChannelUserNamePatchSerializer(ChannelSSerializer):
     channel = serializers.CharField(required=True)
     username = serializers.CharField(required=False)
     status1 = serializers.CharField(required=False)
@@ -67,7 +61,7 @@ class ChannelUserNamePatchSerializer(serializers.Serializer):
             raise serializers.ValidationError("Channel must be one of the following: " + str(helpers.channelsList()))
         return channel
 
-
+# For reading channel usernames for /GET and /PATCH (response)
 class ChannelUserNamesReadSerializer(serializers.Serializer):
      id = serializers.CharField(required=False)
      username = serializers.CharField(required=False)
@@ -80,17 +74,10 @@ class ChannelUserNamesReadSerializer(serializers.Serializer):
      updated_at = serializers.DateTimeField(required=False)
      deleted_at = serializers.DateTimeField(required=False)
 
-     def validate(self, data):
-        """
-        Validate the serializer data.
-        """
-        username = data.get('username')
-        status1 = data.get('status1')
-        status2 = data.get('status2')
-        status3 = data.get('status3')
-        status4 = data.get('status4')
-        sandbox = data.get('sandbox')
-        return data
+# for deleting a channel username: /DELETE
+class ChannelUserNameDeleteSerializer(ChannelSSerializer):
+    id = serializers.CharField(required=True)
+
      
 # from rest_framework import serializers
 # from .models import InstagramUserNames, InstagramSandboxUserNames

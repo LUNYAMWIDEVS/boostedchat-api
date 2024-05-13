@@ -18,7 +18,7 @@ class ChannelManager:
             params (dict, optional): A dictionary containing username and status information.
                 Defaults to {}.
         """
-        _, username, status1, status2, status3, sandbox, _ = helpers.getChannelUserNameParams(params)
+        _, _, username, status1, status2, status3, sandbox, _ = helpers.getChannelUserNameParams(params)
         
         recordExists = self.ChannelUserNames.objects.filter(username=username ).exists()
         record_is_deleted = self.ChannelUserNames.objects.all_with_deleted().filter(username=username).exists()
@@ -77,8 +77,7 @@ class ChannelManager:
             return None
 
     def update_channel_username(self, params = {}):
-        _, username, status1, status2, status3, sandbox, filters = helpers.getChannelUserNameParams(params, action="update")
-        print(filters)
+        _, _, username, status1, status2, status3, sandbox, filters = helpers.getChannelUserNameParams(params, action="update")
         channel_usernames = self.read_channel_usernames(filters) # user filters here
         for channel_username in channel_usernames:
             if channel_username:
@@ -87,14 +86,15 @@ class ChannelManager:
                     if value is not None and field in model_fields:  # Check for non-None value and valid field
                         setattr(channel_username, field, value)
                 channel_username.save()
-                return True
-        return False
+        return channel_usernames
 
-    def delete_channel_username(self, username):
-        channel_username = self.read_channel_username(username)
-        if channel_username:
-            channel_username.delete()
-            return True
+    def delete_channel_username(self, params = {}):
+        _, id, _, _, _, _, _, filters = helpers.getChannelUserNameParams(params)
+        channel_username = self.read_channel_username(filters)
+        channel_usernames = self.read_channel_usernames(filters) # user filters here
+        for channel_username in channel_usernames:
+            if channel_username:
+                channel_username.delete()
         return False
 
     def save_channel_lead_username(self, username, lead_id):

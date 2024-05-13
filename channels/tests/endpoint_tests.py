@@ -42,7 +42,7 @@ from .utils import *
 class ChannelUserNameViewSetTestCase(TestUtils):
     def setUp(self):
         self.factory = APIRequestFactory()
-        self.view = ChannelUserNameViewSet.as_view({'post': 'create', 'get':'list', 'patch':'update'})
+        self.view = ChannelUserNameViewSet.as_view({'post': 'create', 'get':'list', 'patch':'update', 'delete':'destroy'})
         channels = helpers.channelsList()
         channels_string = ','.join(channels)
         self.missing_channel = {}
@@ -406,20 +406,30 @@ class ChannelUserNameViewSetTestCase(TestUtils):
         header = {"HTTP_AUTHORIZATION": f'Bearer {str(self.token)}'}
         channels = helpers.channelsList()
 
-        # Create records
-        for channel in channels:
-            valid_data = {'channel': channel, 'username': f'{channel}-example_username', 'status': 'active', 'sandbox': True}
-            request = self.factory.post('/', valid_data, format='json', **header)
-            response = self.view(request)
         level = 1
-        describe = "Testing if inactive status is changed to active when changed one by one"
+        describe = "Testing if active status1 is changed to inactive when changed using {status1: 'active'} filter"
         self.describe(describe, level)
+
         # Update records
         for channel in channels:
-            valid_data = {'channel': channel, 'username': f'{channel}-example_username', 'status': 'inactive', 'sandbox': True, "filters":{"status":"active"}}
+            # create 10 inactive records for channel
+            for i in range(1, 10):
+                valid_data = {'channel': channel, 'username': f'{channel}-{i}-example_username', 'status1': 'active', 'sandbox': True}
+                request = self.factory.post('/', valid_data, format='json', **header)
+                response = self.view(request)
+            
+            ## get list of active status1s of channel
+            request = self.factory.get('/', **header, data={'channel': channel, 'status1': 'active'})
+            response = self.view(request)
+            active_status1s = response.data
+            for active_status1 in active_status1s:
+                active_status1['status1'] = 'inactive'
+            
+
+            # update the 10 inactive records to active
+            valid_data = {'channel': channel, 'status1': 'inactive', 'sandbox': True, "filters":{"status1":"active"}}
             request = self.factory.patch('/', valid_data, format='json', **header)
             response = self.view(request)
-            print(response.data)
 
             # Check if the status code is 200 OK
             should = f"Return 200 for successful update in {channel}"
@@ -432,14 +442,112 @@ class ChannelUserNameViewSetTestCase(TestUtils):
             )
 
             # Check if the status of the updated record is 'inactive'
-            should = f"Return 'inactive' status for updated record in {channel}"
+            response_data = response.data.get("data", [])
+
+            # The updated_at field will certainly have changed. So remove it from comparison
+            for active_status1 in active_status1s:
+                del active_status1['updated_at']
+            for reponse in response_data:
+                del reponse['updated_at']
+            
+            should = f"Return 'inactive' status for updated records in {channel}"
             self.localTest(
                 self.assertEqual,
-                response.data['status'],
-                'inactive',
+                active_status1s,
+                response_data,
                 should=should,
                 level=level
             )
+
+            # update sandbox
+            describe = "Testing if sandbox status is changed to False when changed using {sandbox: True} filter"
+            self.describe(describe, level)
+            # update sandbox and check if the update is successful
+            true_sandboxes = response_data
+            for true_sandbox in true_sandboxes:
+                true_sandbox['sandbox'] = False
+            valid_data = {'channel': channel, 'status1': 'inactive', 'sandbox': False, "filters":{"sandbox":True}}
+            request = self.factory.patch('/', valid_data, format='json', **header)
+            response = self.view(request)
+            should = f"Return 200 for successful update of sandbox in {channel}"
+            self.localTest(
+                self.assertEqual,
+                response.status_code,
+                status.HTTP_200_OK,
+                should=should,
+                level=level
+            )
+            response_data = response.data.get("data", [])
+
+            # The updated_at field will certainly have changed. So remove it from comparison
+            for true_sandbox in true_sandboxes:
+                if 'updated_at' in true_sandbox:
+                    del true_sandbox['updated_at']
+            for reponse in response_data:
+                if 'updated_at' in reponse:
+                    del reponse['updated_at']
+            should = f"Return False for sandbox in {channel}"
+            self.localTest(
+                self.assertEqual,
+                true_sandboxes,
+                response_data,
+                should=should,
+                level=level
+            )
+
+
+
+
+    # write tests for deleting channel usernames
+    def test_test_delete_function(self):
+        level = 0
+        describe = "Testing delete function"
+        self.describe(describe, level)
+        header = {"HTTP_AUTHORIZATION": f'Bearer {str(self.token)}'}
+        channels = helpers.channelsList()
+
+        # create 10 records in each channel
+        for channel in channels:
+            for i in range(1, 10):
+                valid_data = {'channel': channel, 'username': f'{channel}-{i}-example_username', 'status1': 'active', 'sandbox': True}
+                request = self.factory.post('/', valid_data, format='json', **header)
+                response = self.view(request)
+
+            # loop through the records and delete them one by one using id key
+            request = self.factory.get('/', **header, data={'channel': channel})
+            response = self.view(request)
+            response_data = response.data
+            level = 1
+            describe = f"Testing if records are deleted one by one for {channel}"
+            self.describe(describe, level)
+            for response_ in response_data:
+                id = response_.get('id')
+                valid_data = {'channel': channel, 'id': id}
+                url = f'/?channel={channel}&id={id}'
+                request = self.factory.delete(url, **header)
+                response = self.view(request)
+                should = f"Return 200 for successful deletion of {id}"
+                self.localTest(
+                    self.assertEqual,
+                    response.status_code,
+                    status.HTTP_200_OK,
+                    should=should,
+                    level=level
+                )
+            request = self.factory.get('/', **header, data={'channel': channel})
+            response = self.view(request)
+            should = f"Return 0 records for {channel}"
+            self.localTest(
+                self.assertEqual,
+                len(response.data),
+                0,
+                should=should,
+                level=level
+            )
+
+
+
+
         ## Update all records where status is 'inactive'
         # valid_data = {'filters': {'status': 'inactive'}, 'status': 'active', 'sandbox': True}
         # request = self.factory.put('/', valid_data, format='json', **header)

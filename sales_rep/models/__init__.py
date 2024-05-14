@@ -1,4 +1,4 @@
-from .sales_rep import SalesRep
+from .sales_rep import *
 
 """
 Requirements:

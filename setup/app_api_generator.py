@@ -1,8 +1,3 @@
-# ref: https://gist.github.com/D2theR/0b439164e94a9577d4b502496c7672cf
-"""
-Auto-generates Serializers & ModelViewSets in a Django API using just models
-Adjusted to include only the apps that have auto settings enabled in settings.py
-"""
 from rest_framework import serializers, viewsets, routers
 from django import apps
 import sys
@@ -18,21 +13,49 @@ Adjusting the `depth` variable on Meta class can drastically speed up the API.
 It's recommended to use a customer Manager on each of your models to override
 `select_related` and `prefetch_related` and define which fields need joined there.
 """
+def listMethods():
+    return ['POST', 'GET', 'PUT', 'PATCH', 'DELETE']
 def make_api_serializers(api_models, base_serializer_class=serializers.ModelSerializer):
     api_serializers = []
     for ModelClass in api_models:
-        #Create the serializer class
         class_name = f'{ModelClass.__name__}Serializer'
-        class ModelSerializer(base_serializer_class):
-            class Meta:
-                model = ModelClass
-                fields = '__all__'
-                depth = 2
-        ModelSerializer.__name__ = class_name
-        api_serializers.append({f"{ModelClass._meta.app_label}.{ModelClass.__name__}" :ModelSerializer})
+        exclude_fields_for_methods = {
+            "POST": ('id',), #validate_id is not working, so we will just use this one here
+            "GET": (),
+            "PUT": (),
+            "PATCH": (),
+            "DELETE": (),
+        }
+        methods = listMethods()
+        methods_serializers = {}
+        for method in methods:
+            def getModelSerializer(ModelClass, method):
+                class_name = f'{ModelClass.__name__}Serializer'
+                class ModelSerializer(base_serializer_class):
+                    class Meta:
+                        model = ModelClass
+                        depth = 10
+                        if exclude_fields_for_methods[method]:
+                            exclude = exclude_fields_for_methods[method]
+                        else:
+                            fields = '__all__'
+                    def validate_id(self, value):
+                        if self.context['request'].method == 'POST' and value is not None:
+                            raise serializers.ValidationError("Cannot specify 'id' when creating a new object.")
+                        return value
+                
+                ModelSerializer.__name__ = class_name
+                return ModelSerializer
+            methods_serializers[method] = getModelSerializer(ModelClass, method)
+        api_serializers.append({f"{ModelClass._meta.app_label}.{ModelClass.__name__}": methods_serializers})
     return api_serializers
 
+auto_apps_models = [model for model in apps.apps.get_models() if hasattr(model, 'autoLoad') and model.autoLoad]
+api_serializers = make_api_serializers(auto_apps_models)
 
+for ser in api_serializers:
+   name = tuple(ser.keys())
+   setattr(module, name[0].lower(), ser[name[0]])
 
 """
 This function generates ModelViewSets for every model returned in apps.apps.get_models()
@@ -42,36 +65,31 @@ def make_api_viewsets(api_models, api_serializers):
     api_viewsets = []
     for ModelClass, SerializerClass in zip(api_models, api_serializers):
         table_name = ModelClass._meta.db_table
-        app_name = ModelClass._meta.app_label
-        viewset_name = f'{ModelClass.__name__}ViewSet'
-        viewset_bases = (viewsets.ModelViewSet,)
-        viewset_attrs = {
-            'db_table': table_name,
-            'queryset': ModelClass.objects.all(),
-            'serializer_class': SerializerClass[f'{app_name}.{ModelClass.__name__}'],
-            'app_name': app_name
-        }
+        app_name = ModelClass._meta.app_label       
+        def create_viewset(ModelClass, table_name, SerializerClass):
+            class ModelViewSet(viewsets.ModelViewSet):
+                db_table =  table_name
+                queryset = ModelClass.objects.all()
+                app_name = ModelClass._meta.app_label
 
-        ModelViewSet = type(
-            viewset_name,
-            viewset_bases,
-            viewset_attrs,
-        )
-        api_viewsets.append({f"{app_name}.{ModelClass.__name__}" :ModelViewSet})
+                def get_serializer_class(self):
+                    method = self.request.method
+
+                    serializer = SerializerClass[f'{self.app_name}.{ModelClass.__name__}'].get(method)
+                    # get valid data here
+                    
+                    if serializer is None:
+                        raise ValueError(f"No serializer defined for method {method}")
+                    return serializer
+
+            return ModelViewSet
+        viewset = create_viewset(ModelClass, table_name, SerializerClass)
+        api_viewsets.append({f"{app_name}.{ModelClass.__name__}": viewset})
     return api_viewsets
 
-auto_apps_models = [model for model in apps.apps.get_models() if hasattr(model, 'autoLoad') and model.autoLoad]
-
-api_serializers = make_api_serializers(auto_apps_models)
-
-for ser in api_serializers:
-   name = tuple(ser.keys())
-   setattr(module, name[0].lower(), ser[name[0]])
 api_viewsets = make_api_viewsets(auto_apps_models, api_serializers)
 
-
 for vs in api_viewsets:
-   print(vs)
    name = tuple(vs.keys())
    setattr(module, name[0].lower(), vs[name[0]])
 
@@ -86,5 +104,4 @@ for viewset in api_viewsets:
 
 router = routers.DefaultRouter()
 for route in rest_api_urls:
-    print(route[0], route[1], route[2])
     router.register(route[0], route[1], basename=route[2])

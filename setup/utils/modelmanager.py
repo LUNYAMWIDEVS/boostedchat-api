@@ -125,20 +125,31 @@ class modelManager(models.Manager):
     def save_model(self, params = {}, semi_primary_key = None): # semi_primary is the unique field to filter by
         if self.uniqueFieldsExist(self.localModel, params):
             raise serializers.ValidationError(f"Record already exists.")
-       
-        valid_params = self.model_field_params(self.localModel, params)
+        valid_params = self.model_field_params(self.localModel, params)        
+        model_fields, unique_fields, required_fields, primary_key = self.getModelFields(self.localModel)
+        # remove primary key from valid_params. Assuming it is 'id'
+        if primary_key in valid_params:
+            valid_params.pop(primary_key)
+        filters = Q()
+        if semi_primary_key is None:
+            for field, value in valid_params.items():
+                if (field in unique_fields or field == primary_key) and value is not None and value != "":
+                    filters |= Q(**{field: value})
+        else:
+            filters |= Q(**{semi_primary_key: valid_params[semi_primary_key]})
+
         recordExists = False
         record_is_deleted = False
         if semi_primary_key is not None:
-            semi_primary_value = valid_params[semi_primary_key]
-            recordExists = self.localModel.objects.filter(semi_primary_key=semi_primary_value ).exists()
-            record_is_deleted = self.localModel.objects.all_with_deleted().filter(semi_primary_key=semi_primary_value).exists()
+            # semi_primary_value = valid_params[semi_primary_key]
+            recordExists = self.localModel.objects.filter(filters).exists()
+            record_is_deleted = self.localModel.objects.all_with_deleted().filter(filters).exists()
         if record_is_deleted:
-            self.ChannelUserNames.objects.all_with_deleted().filter(semi_primary_key=semi_primary_value).first().undelete()
+            self.localModel.objects.all_with_deleted().filter(filters).first().undelete()
         local_entry = None
         try:
             local_entry, created = self.localModel.objects.get_or_create(
-                valid_params
+                **valid_params
             )
             # Update existing record if not created
             if not created:

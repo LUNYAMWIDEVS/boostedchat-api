@@ -1,107 +1,205 @@
 from rest_framework import serializers, viewsets, routers
-from django import apps
+from django.apps import apps
 import sys
+from rest_framework.exceptions import MethodNotAllowed
+from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny, IsAuthenticatedOrReadOnly
+from rest_framework.response import Response
+from rest_framework import status
+from base.helpers.push_id import PushID
+from rest_framework import generics, mixins, views
+from django.http import QueryDict
 
-module = sys.modules[__name__]
-# "module/sys.modules" is a list of all the system files that are loading into memory at run time.
-# There are for loops below that bolt the auto-generated ViewSets and Serializers to
-# Django at runtime using the setattr() method.
+class APIRouterGenerator:
+    """
+    Generates serializers and viewsets for Django models with the `autoLoad` attribute.
+    """
 
-"""
-This function generates serializers for every model returned in apps.apps.get_models()
-Adjusting the `depth` variable on Meta class can drastically speed up the API.
-It's recommended to use a customer Manager on each of your models to override
-`select_related` and `prefetch_related` and define which fields need joined there.
-"""
-def listMethods():
-    return ['POST', 'GET', 'PUT', 'PATCH', 'DELETE']
-def make_api_serializers(api_models, base_serializer_class=serializers.ModelSerializer):
-    api_serializers = []
-    for ModelClass in api_models:
-        class_name = f'{ModelClass.__name__}Serializer'
-        exclude_fields_for_methods = {
-            "POST": ('id',), #validate_id is not working, so we will just use this one here
-            "GET": (),
-            "PUT": (),
-            "PATCH": (),
-            "DELETE": (),
-        }
-        methods = listMethods()
-        methods_serializers = {}
-        for method in methods:
-            def getModelSerializer(ModelClass, method):
-                class_name = f'{ModelClass.__name__}Serializer'
-                class ModelSerializer(base_serializer_class):
-                    class Meta:
-                        model = ModelClass
-                        depth = 10
-                        if exclude_fields_for_methods[method]:
-                            exclude = exclude_fields_for_methods[method]
+    def __init__(self):
+        self.module = sys.modules[__name__]
+        self.auto_apps_models = [
+            model for model in apps.get_models() if hasattr(model, 'autoLoad') and model.autoLoad
+        ]
+        self.api_serializers = self.make_api_serializers(self.auto_apps_models)
+        self.api_viewsets = self.make_api_viewsets(self.auto_apps_models, self.api_serializers)
+        self.rest_api_urls = self.create_rest_api_urls()
+        self.router = self.create_router()
+
+    @staticmethod
+    def listMethods():
+        return ['POST', 'GET', 'PUT', 'PATCH', 'DELETE']
+
+    def make_api_serializers(self, api_models, base_serializer_class=serializers.ModelSerializer):
+        api_serializers = []
+        for ModelClass in api_models:
+            class_name = f'{ModelClass.__name__}Serializer'
+            exclude_fields_for_methods = {
+                "POST": ('id',),
+                "GET": (),
+                "PUT": (),
+                "PATCH": ('created_at', 'updated_at', 'deleted_at'),
+                "DELETE": (),
+            }
+            methods = self.listMethods()
+            methods_serializers = {}
+            for method in methods:
+                def get_model_serializer(ModelClass, method):
+                    class_name = f'{ModelClass.__name__}Serializer'
+
+                    class ModelSerializer(base_serializer_class):
+                        class Meta:
+                            model = ModelClass
+                            depth = 10
+                            if exclude_fields_for_methods[method]:
+                                exclude = exclude_fields_for_methods[method]
+                            else:
+                                fields = '__all__'
+
+                        # def validate_id(self, value): # Not working
+                        #     if self.context['request'].method == 'POST' and value is not None:
+                        #         raise serializers.ValidationError("Cannot specify 'id' when creating a new object.")
+                        #     return value
+
+                    ModelSerializer.__name__ = class_name
+                    return ModelSerializer
+
+                methods_serializers[method] = get_model_serializer(ModelClass, method)
+            api_serializers.append({f"{ModelClass._meta.app_label}.{ModelClass.__name__}": methods_serializers})
+        return api_serializers
+
+    def make_api_viewsets(self, api_models, api_serializers):
+        api_viewsets = []
+        for ModelClass, SerializerClass in zip(api_models, api_serializers):
+            table_name = ModelClass._meta.db_table
+            app_name = ModelClass._meta.app_label
+
+            def create_viewset(ModelClass, table_name, SerializerClass):
+                class ModelViewSet(viewsets.ModelViewSet):
+                    db_table = table_name
+                    queryset = ModelClass.objects.all()
+                    app_name = ModelClass._meta.app_label
+                    read_with_data = False
+
+                    def get_permissions(self): # make generic. should have IsAuthenticated classed by default
+                        """
+                        Instantiates and returns the list of permissions that this view requires.
+                        """
+                        if hasattr(ModelClass, 'permissionClasses'):
+                            permission_classes = ModelClass.permissionClasses
+                        elif self.action == 'list':
+                            permission_classes = [IsAuthenticated]
                         else:
-                            fields = '__all__'
-                    def validate_id(self, value):
-                        if self.context['request'].method == 'POST' and value is not None:
-                            raise serializers.ValidationError("Cannot specify 'id' when creating a new object.")
-                        return value
-                
-                ModelSerializer.__name__ = class_name
-                return ModelSerializer
-            methods_serializers[method] = getModelSerializer(ModelClass, method)
-        api_serializers.append({f"{ModelClass._meta.app_label}.{ModelClass.__name__}": methods_serializers})
-    return api_serializers
+                            permission_classes = [IsAdminUser]
+                        return [permission() for permission in permission_classes]
+                    def list(self, request):
+                        # serializer = ModelClass.localSerializers.get('GET') if ModelClass .hasattr('localSerializers')  and ModelClass.localSerializers.get('GET') else self.get_serializer_class()
+                        # # check if models has serializer for list, if not use our serializer here
+                        # print(ModelClass.has_serializer('list'))
+                        # # serializer = self.get_serializer(data=request.query_params)
+                        # # if serializer.is_valid():
+                        #     LocalChannelManager = ChannelManager(serializer.validated_data['channel'])
+                        #     data = LocalChannelManager.read_channel_usernames(serializer.validated_data)
+                        #     serializer = ChannelUserNamesReadSerializer(data, many=True)
+                        #     return Response(serializer.data)
+                        # return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                        return super().list(request)
+                    def retrieve(self, request): # check. how to use this??
+                        return super().retrieve(request)
+                    def create(self, request):
+                        modelHasModelManager = hasattr(ModelClass, 'modelManager')
+                        if not modelHasModelManager: # set id to avoid serializer error. We have used serializer with id field so that 'id' is also returned after creating record
+                            id = PushID().next_id()
+                            data = request.data.copy()
+                            data['id'] = id
+                            request._full_data = data  # This is a hack to get around the fact that the request.data is immutable
+                            ret = super().create(request)                        
+                            return ret
+                        else: # with a model manager supplied
+                            modelHasSerializer = False
+                            serializer = None
+                            requestSerializer = None 
+                            replySerializer = None
+                            if not modelHasSerializer:
+                                id = PushID().next_id()
+                                data = request.data.copy()
+                                data['id'] = id
+                                request._full_data = data
+                                # requestSerializer = self.get_serializer_for_method("POST")(data=request.data)
+                                # replySerializer = SerializerClass[f'{self.app_name}.{ModelClass.__name__}'].get("GET")
+                            else:
+                                # set the serializer here
+                                pass
+                            requestSerializer = self.get_serializer(data=request.data) # will be either from here or from ModelClass
+                            replySerializer = self.get_serializer_class("GET")
+                                                        
+                            requestSerializer.is_valid(raise_exception=True)
+                            ret  = ModelClass.modelManager(ModelClass).save_model(requestSerializer.validated_data)
+                            replySerializer = replySerializer(ret, many=False) # return with id field
+                            ret = replySerializer.data                            
+                            headers = self.get_success_headers(ret)
+                            return Response(ret, status=status.HTTP_201_CREATED,  headers=headers)
+                    def patch(self, request):
+                        return self.update(request)
+                    def partial_update(self, request): # check. How to use this
+                        print("na patch....")
+                        raise MethodNotAllowed(method='PATCH',  detail='Method "PATCH" not allowed without lookup')
+                    def delete(self, request): # this is a work around. I cannot get the destroy method to work with self.http_method_names
+                        raise MethodNotAllowed(method='DELETE', detail='Method "DELETE" not allowed without lookup')
 
-auto_apps_models = [model for model in apps.apps.get_models() if hasattr(model, 'autoLoad') and model.autoLoad]
-api_serializers = make_api_serializers(auto_apps_models)
+                    def get_serializer_for_method(self, method):
+                        method = method.upper()
+                        if not hasattr(ModelClass, 'localSerializers'):
+                            return None
+                        print("abuso.....", method)
+                        print(ModelClass.localSerializers)
+                        for serializer_name, serializer_info in ModelClass.localSerializers.items():
+                            if method in serializer_info["methods"]:
+                                return serializer_info["serializer"]
+                        # # If method-specific serializer does not exist, return the default serializer
+                        # return self.get_serializer_for_method("default")
+                        return None # use the serializer defined here
+                    def get_serializer_class(self, method=None):
+                        if method is None:
+                            method = self.request.method                        
+                        serializer = self.get_serializer_for_method(method)
+                        if serializer is not None:
+                            return serializer
+                        if method == "POST":
+                            if  self.request.data == {}: # from a different method for displaying in form
+                                serializer = SerializerClass[f'{self.app_name}.{ModelClass.__name__}'].get("POST") # for showing in the form. No id
+                            else :
+                                if self.request.data.get("___read_with_id") == 1:
+                                    serializer = SerializerClass[f'{self.app_name}.{ModelClass.__name__}'].get("POST")  # for showing in the form. No id
+                                else:
 
-for ser in api_serializers:
-   name = tuple(ser.keys())
-   setattr(module, name[0].lower(), ser[name[0]])
+                                    number = self.request.data.get("___read_with_id") if hasattr(self.request.data, "___read_with_id") else 0
+                                    number += 1
+                                    data = self.request.data.copy()
+                                    data['___read_with_id'] = number
+                                    self.request._full_data = data
+                                    serializer = SerializerClass[f'{self.app_name}.{ModelClass.__name__}'].get("GET") # return data with id field
+                        else:
+                            serializer = SerializerClass[f'{self.app_name}.{ModelClass.__name__}'].get(method)
 
-"""
-This function generates ModelViewSets for every model returned in apps.apps.get_models()
-and zips in all the api_serializers models generated in previous for-loop.
-"""
-def make_api_viewsets(api_models, api_serializers):
-    api_viewsets = []
-    for ModelClass, SerializerClass in zip(api_models, api_serializers):
-        table_name = ModelClass._meta.db_table
-        app_name = ModelClass._meta.app_label       
-        def create_viewset(ModelClass, table_name, SerializerClass):
-            class ModelViewSet(viewsets.ModelViewSet):
-                db_table =  table_name
-                queryset = ModelClass.objects.all()
-                app_name = ModelClass._meta.app_label
+                        if serializer is None:
+                            raise ValueError(f"No serializer defined for method {method}")
+                        return serializer
 
-                def get_serializer_class(self):
-                    method = self.request.method
+                return ModelViewSet
 
-                    serializer = SerializerClass[f'{self.app_name}.{ModelClass.__name__}'].get(method)
-                    # get valid data here
-                    
-                    if serializer is None:
-                        raise ValueError(f"No serializer defined for method {method}")
-                    return serializer
+            viewset = create_viewset(ModelClass, table_name, SerializerClass)
+            api_viewsets.append({f"{app_name}.{ModelClass.__name__}": viewset})
+        return api_viewsets
 
-            return ModelViewSet
-        viewset = create_viewset(ModelClass, table_name, SerializerClass)
-        api_viewsets.append({f"{app_name}.{ModelClass.__name__}": viewset})
-    return api_viewsets
+    def create_rest_api_urls(self):
+        rest_api_urls = []
+        for viewset in self.api_viewsets:
+            app_name = list(viewset.keys())[0].lower().split('.')
+            k = list(viewset.keys())[0]
+            rest_api_urls.append((fr'{app_name[0]}/{app_name[1]}', viewset[k], f'{app_name[0]}/{app_name[1]}'))
+        return rest_api_urls
 
-api_viewsets = make_api_viewsets(auto_apps_models, api_serializers)
-
-for vs in api_viewsets:
-   name = tuple(vs.keys())
-   setattr(module, name[0].lower(), vs[name[0]])
-
-# Creates a list of tuples that is used to then register generated ModelViewSets in DRF.
-# The router is imported into the main urls.py file and uses include('router.urls') within
-# the urlpatters list that Django loads at runtime. See the README for more info.
-rest_api_urls = []
-for viewset in api_viewsets:
-    app_name = list(viewset.keys())[0].lower().split('.')
-    k = list(viewset.keys())[0]
-    rest_api_urls.append((fr'{app_name[0]}/{app_name[1]}', viewset[k], f'{app_name[0]}/{app_name[1]}'))
-
-router = routers.DefaultRouter()
-for route in rest_api_urls:
-    router.register(route[0], route[1], basename=route[2])
+    def create_router(self):
+        router = routers.DefaultRouter()
+        for route in self.rest_api_urls:
+            router.register(route[0], route[1], basename=route[2])
+        return router

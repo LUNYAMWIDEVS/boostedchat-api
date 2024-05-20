@@ -7,6 +7,7 @@ from django.db.models import Q
 
 # Model to track Sandbox usernames and their status
 class SandboxUserNames(BaseModel):
+    autoLoad = True
     username = models.CharField(max_length=255, null=False, blank=False, unique=True)
     status1 = models.CharField(max_length=255, null=True, blank=True)
     status2 = models.CharField(max_length=255, null=True, blank=True)

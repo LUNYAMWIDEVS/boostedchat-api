@@ -8,6 +8,7 @@ from rest_framework import status
 from base.helpers.push_id import PushID
 from rest_framework import generics, mixins, views
 from django.http import QueryDict
+import json
 
 class APIRouterGenerator:
     """
@@ -53,6 +54,12 @@ class APIRouterGenerator:
                                 exclude = exclude_fields_for_methods[method]
                             else:
                                 fields = '__all__'
+                        # def to_representation(self, instance):
+                        #     representation = super().to_representation(instance)
+                        #     if self.context['request'].method == 'GET':
+                        #         filters = {field.name: field.get_internal_type() for field in self.Meta.model._meta.get_fields()}
+                        #         representation['filters'] = filters
+                        #     return representation
 
                         # def validate_id(self, value): # Not working
                         #     if self.context['request'].method == 'POST' and value is not None:
@@ -90,21 +97,37 @@ class APIRouterGenerator:
                         else:
                             permission_classes = [IsAdminUser]
                         return [permission() for permission in permission_classes]
-                    def list(self, request):
-                        # serializer = ModelClass.localSerializers.get('GET') if ModelClass .hasattr('localSerializers')  and ModelClass.localSerializers.get('GET') else self.get_serializer_class()
-                        # # check if models has serializer for list, if not use our serializer here
-                        # print(ModelClass.has_serializer('list'))
-                        # # serializer = self.get_serializer(data=request.query_params)
-                        # # if serializer.is_valid():
-                        #     LocalChannelManager = ChannelManager(serializer.validated_data['channel'])
-                        #     data = LocalChannelManager.read_channel_usernames(serializer.validated_data)
-                        #     serializer = ChannelUserNamesReadSerializer(data, many=True)
-                        #     return Response(serializer.data)
-                        # return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-                        return super().list(request)
-                    def retrieve(self, request): # check. how to use this??
+                    
+                    def get_filters_serializer(self,ModelClass):
+                        class FiltersSerializer(serializers.Serializer):
+                            filters = serializers.JSONField(required=False)
+
+                            def validate_filters(self, value):
+                                # Optionally validate filter fields against model fields
+                                model_fields = {field.name for field in ModelClass._meta.get_fields()}
+                                invalid_fields = [field for field in value.keys() if field not in model_fields]
+                                if invalid_fields:
+                                    raise serializers.ValidationError(f"Invalid fields: {', '.join(invalid_fields)}")
+                                return value
+
+                        return FiltersSerializer
+
+                    def list(self, request): # todo: add filters
+                        FiltersSerializer = self.get_filters_serializer(self.get_queryset().model)
+                        filters_serializer = FiltersSerializer(data=request.query_params)
+                        filters_serializer.is_valid(raise_exception=True)
+                        # Serialize the filters data
+                        filters_data = filters_serializer.data
+                        print("Filters Data", filters_data, filters_serializer.validated_data)
+                        ret = ModelClass.modelManager(ModelClass).read_model(filters_serializer.validated_data)
+                        replySerializer = self.get_serializer_class("GET")
+                        replySerializer = replySerializer(ret, many=True) # return with id field
+                        ret = replySerializer.data   
+                        return Response(ret, status=status.HTTP_200_OK) 
+                        # return super().list(request)
+                    def get(self, request): # quickfix for retrieve. done
                         return super().retrieve(request)
-                    def create(self, request):
+                    def create(self, request): # done
                         modelHasModelManager = hasattr(ModelClass, 'modelManager')
                         if not modelHasModelManager: # set id to avoid serializer error. We have used serializer with id field so that 'id' is also returned after creating record
                             id = PushID().next_id()
@@ -114,20 +137,22 @@ class APIRouterGenerator:
                             ret = super().create(request)                        
                             return ret
                         else: # with a model manager supplied
-                            modelHasSerializer = False
-                            serializer = None
+                            # modelHasSerializer = False
+                            # serializer = None
                             requestSerializer = None 
                             replySerializer = None
-                            if not modelHasSerializer:
-                                id = PushID().next_id()
-                                data = request.data.copy()
-                                data['id'] = id
-                                request._full_data = data
-                                # requestSerializer = self.get_serializer_for_method("POST")(data=request.data)
-                                # replySerializer = SerializerClass[f'{self.app_name}.{ModelClass.__name__}'].get("GET")
-                            else:
-                                # set the serializer here
-                                pass
+                            # if not modelHasSerializer:
+                            #     id = PushID().next_id()
+                            #     data = request.data.copy()
+                            #     data['id'] = id
+                            #     request._full_data = data
+                            # else:
+                            #     pass
+                            id = PushID().next_id()
+                            data = request.data.copy()
+                            data['id'] = id
+                            request._full_data = data
+                            
                             requestSerializer = self.get_serializer(data=request.data) # will be either from here or from ModelClass
                             replySerializer = self.get_serializer_class("GET")
                                                         
@@ -137,20 +162,28 @@ class APIRouterGenerator:
                             ret = replySerializer.data                            
                             headers = self.get_success_headers(ret)
                             return Response(ret, status=status.HTTP_201_CREATED,  headers=headers)
-                    def patch(self, request):
-                        return self.update(request)
-                    def partial_update(self, request): # check. How to use this
-                        print("na patch....")
-                        raise MethodNotAllowed(method='PATCH',  detail='Method "PATCH" not allowed without lookup')
-                    def delete(self, request): # this is a work around. I cannot get the destroy method to work with self.http_method_names
+                    def destroy(self, request, *args, **kwargs): # done: delete single record (with lookup)
+                        return super().destroy(request, *args, **kwargs)
+                    def delete(self, request): # delete without lookup
                         raise MethodNotAllowed(method='DELETE', detail='Method "DELETE" not allowed without lookup')
-
+                    def update(self, request, *args, **kwargs): 
+                        # return super().update(request, *args, **kwargs)
+                        partial = kwargs.pop('partial', False)
+                        instance = self.get_object()
+                        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+                        serializer.is_valid(raise_exception=True)
+                        return self.perform_update(serializer)
+                    def perform_update(self, serializer):
+                        ret = ModelClass.modelManager(ModelClass).update_model(serializer.validated_data)
+                        # ret = serializer.validated_data
+                        replySerializer = self.get_serializer_class("GET")
+                        replySerializer = replySerializer(ret, many=False) # return with id field
+                        ret = replySerializer.data    
+                        return Response(ret, status=status.HTTP_201_CREATED)
                     def get_serializer_for_method(self, method):
                         method = method.upper()
                         if not hasattr(ModelClass, 'localSerializers'):
                             return None
-                        print("abuso.....", method)
-                        print(ModelClass.localSerializers)
                         for serializer_name, serializer_info in ModelClass.localSerializers.items():
                             if method in serializer_info["methods"]:
                                 return serializer_info["serializer"]

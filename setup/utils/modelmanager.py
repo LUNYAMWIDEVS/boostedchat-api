@@ -121,15 +121,14 @@ class modelManager(models.Manager):
         valid_params = {key: value for key, value in params.items() if key in model_fields}
         return valid_params
 
-
     def save_model(self, params = {}, semi_primary_key = None): # semi_primary is the unique field to filter by
         if self.uniqueFieldsExist(self.localModel, params):
             raise serializers.ValidationError(f"Record already exists.")
         valid_params = self.model_field_params(self.localModel, params)        
         model_fields, unique_fields, required_fields, primary_key = self.getModelFields(self.localModel)
         # remove primary key from valid_params. Assuming it is 'id'
-        if primary_key in valid_params:
-            valid_params.pop(primary_key)
+        # if primary_key in valid_params:
+        #     valid_params.pop(primary_key)
         filters = Q()
         if semi_primary_key is None:
             for field, value in valid_params.items():
@@ -164,44 +163,28 @@ class modelManager(models.Manager):
 
         return local_entry
 
+    def update_model(self, params = {}): # semi_primary is the unique field to filter by
+        valid_params = self.model_field_params(self.localModel, params)        
+        model_fields, unique_fields, required_fields, primary_key = self.getModelFields(self.localModel)
+        filters = Q()
+        for field, value in valid_params.items():
+            if (field == primary_key):
+                filters &= Q(**{field: value})
+        local_entry = None
+        try:
+            local_entry = self.localModel.objects.filter(filters).first()
+            for field, value in valid_params.items():
+                setattr(local_entry, field, value)
+            local_entry.save()
+        except IntegrityError as e:
+            print(e)
+            raise serializers.ValidationError(f"Unknown erorr for record")
+        return local_entry
+
     
-    # def read_model(self, params = {}):
-    #     """
-    #     Reads usernames based on the provided parameters. Filters based on any non-None parameter present in the ChannelUserNames model.
-
-    #     Args:
-    #         params (dict, optional): A dictionary containing optional filter parameters.
-    #             Defaults to {}.
-
-    #     Returns:
-    #         QuerySet: A queryset of ChannelUserNames objects filtered based on the params.
-    #     """
-    #     filters = Q()
-    #     model_fields = {field.name for field in self.ChannelUserNames._meta.get_fields()}  # Get model field names
-    #     for field, value in params.items():
-    #         if value is not None and field in model_fields:  # Check for non-None value and valid field
-    #             filters &= Q(**{field: value})
-    #     return self.ChannelUserNames.objects.filter(filters)
-    
-
-
-    # def update_model(self, params = {}):
-    #     _, _, username, status1, status2, status3, sandbox, filters = helpers.getChannelUserNameParams(params, action="update")
-    #     channel_usernames = self.read_channel_usernames(filters) # user filters here
-    #     for channel_username in channel_usernames:
-    #         if channel_username:
-    #             model_fields = {field.name for field in self.ChannelUserNames._meta.get_fields()}  # Get model field names
-    #             for field, value in params.items():
-    #                 if value is not None and field in model_fields:  # Check for non-None value and valid field
-    #                     setattr(channel_username, field, value)
-    #             channel_username.save()
-    #     return channel_usernames
-
-    # def delete_model(self, params = {}):
-    #     _, id, _, _, _, _, _, filters = helpers.getChannelUserNameParams(params)
-    #     channel_username = self.read_channel_username(filters)
-    #     channel_usernames = self.read_channel_usernames(filters) # user filters here
-    #     for channel_username in channel_usernames:
-    #         if channel_username:
-    #             channel_username.delete()
-    #     return False
+    def read_model(self, params = {}):
+        filters = Q()
+        if params.get("filters"):
+            for field, value in params.get("filters").items():
+                filters &= Q(**{field: value})
+        return self.localModel.objects.filter(filters)

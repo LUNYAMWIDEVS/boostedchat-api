@@ -21,7 +21,9 @@ from rest_framework import permissions
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
 # from setup.utils.app_api_generator import router
-from .app_api_generator import router
+# from .app_api_generator import router
+from .app_api_generator import APIRouterGenerator
+router = APIRouterGenerator().router
 
 schema_view = get_schema_view(
     openapi.Info(
@@ -50,7 +52,7 @@ urlpatterns = [
     path("v1/logs/", include("audittrails.urls")),
     path("v1/dialogflow/", include("dialogflow.urls")),
     # path('v1/outreaches/', include('outreaches.urls')),
-    path('v1/channels/', include('channels.urls')),  # Include app-specific URLs
+    # path('v1/channels/', include('channels.urls')),  # Include app-specific URLs
     path('v1/', include(router.urls)), # Ref: https://gist.github.com/D2theR/0b439164e94a9577d4b502496c7672cf
 
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

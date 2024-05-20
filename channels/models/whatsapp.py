@@ -4,9 +4,12 @@ from sales_rep.models import SalesRep
 from leads.models import Leads
 from. import helpers
 from django.db.models import Q
+from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny, IsAuthenticatedOrReadOnly
 
 # Model to track Whatsapp usernames and their status
 class WhatsappUserNames(BaseModel):
+    autoLoad = True
+    permissionClasses = [IsAuthenticatedOrReadOnly]
     username = models.CharField(max_length=255, null=False, blank=False, unique=True)
     status1 = models.CharField(max_length=255, null=True, blank=True)
     status2 = models.CharField(max_length=255, null=True, blank=True)

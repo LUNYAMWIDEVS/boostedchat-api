@@ -1,0 +1,26 @@
+[
+  {
+    "model": "sales_rep.SalesRepProfileList",
+    "fields": {
+      "profile": "Barbers"
+    }
+  },
+  {
+    "model": "sales_rep.SalesRepProfileList",
+    "fields": {
+      "profile": "Saloonists"
+    }
+  },
+  {
+    "model": "sales_rep.SalesRepProfileList",
+    "fields": {
+      "profile": "Chefs"
+    }
+  },
+  {
+    "model": "sales_rep.SalesRepProfileList",
+    "fields": {
+      "profile": "Teachers"
+    }
+  }
+]

@@ -1,0 +1,92 @@
+[
+    {
+      "model": "channels.Channel",
+      "pk": 1, 
+      "fields": {
+        "name": "Whatsapp",
+        "docker_url": "whatsapp",
+        "external_url": "https://exteral-url",
+        "description": "..."
+      }
+    },
+    {
+      "model": "channels.Channel",
+      "pk": 2, 
+      "fields": {
+        "name": "Facebook",
+        "docker_url": "facebook",
+        "external_url": "https://exteral-url",
+        "description": "..."
+      }
+    },
+    {
+      "model": "channels.Channel",
+      "pk": 3, 
+      "fields": {
+        "name": "Telegram",
+        "docker_url": "telegram",
+        "external_url": "https://exteral-url",
+        "description": "..."
+      }
+    },
+    {
+      "model": "channels.Channel",
+      "pk": 4, 
+      "fields": {
+        "name": "Slack",
+        "docker_url": "slack",
+        "external_url": "https://exteral-url",
+        "description": "..."
+      }
+    },
+    {
+      "model": "channels.Channel",
+      "pk": 5, 
+      "fields": {
+        "name": "Email",
+        "docker_url": "email",
+        "external_url": "https://exteral-url",
+        "description": "..."
+      }
+    },
+    {
+      "model": "channels.Channel",
+      "pk": 6, 
+      "fields": {
+        "name": "SMS",
+        "docker_url": "sms",
+        "external_url": "https://exteral-url",
+        "description": "..."
+      }
+    },
+    {
+      "model": "channels.Channel",
+      "pk": 7, 
+      "fields": {
+        "name": "Instagram",
+        "docker_url": "instagram",
+        "external_url": "https://exteral-url",
+        "description": "..."
+      }
+    },
+    {
+      "model": "channels.Channel",
+      "pk": 8, 
+      "fields": {
+        "name": "Twitter",
+        "docker_url": "twitter",
+        "external_url": "https://exteral-url",
+        "description": "..."
+      }
+    },
+    {
+      "model": "channels.Channel",
+      "pk": 9, 
+      "fields": {
+        "name": "Linkedin",
+        "docker_url": "linkedin",
+        "external_url": "https://exteral-url",
+        "description": "..."
+      }
+    }
+  ]

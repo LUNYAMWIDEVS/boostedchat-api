@@ -9,6 +9,8 @@ from base.helpers.push_id import PushID
 from rest_framework import generics, mixins, views
 from django.http import QueryDict
 import json
+from setup.utils import modelManager
+
 
 class APIRouterGenerator:
     """
@@ -37,6 +39,7 @@ class APIRouterGenerator:
                 "POST": ('id',),
                 "GET": (),
                 "PUT": (),
+                # "PATCH": ('created_at', 'updated_at', 'deleted_at'),
                 "PATCH": ('created_at', 'updated_at', 'deleted_at'),
                 "DELETE": (),
             }
@@ -86,6 +89,13 @@ class APIRouterGenerator:
                     app_name = ModelClass._meta.app_label
                     read_with_data = False
 
+                    def getModelManager(self):
+                        if hasattr(ModelClass, 'modelManager'):
+                            ret = ModelClass.modelManager
+                        else:
+                            ret = modelManager
+                        return ret
+
                     def get_permissions(self): # make generic. should have IsAuthenticated classed by default
                         """
                         Instantiates and returns the list of permissions that this view requires.
@@ -119,7 +129,7 @@ class APIRouterGenerator:
                         # Serialize the filters data
                         filters_data = filters_serializer.data
                         print("Filters Data", filters_data, filters_serializer.validated_data)
-                        ret = ModelClass.modelManager(ModelClass).read_model(filters_serializer.validated_data)
+                        ret = self.getModelManager()(ModelClass).read_model(filters_serializer.validated_data)
                         replySerializer = self.get_serializer_class("GET")
                         replySerializer = replySerializer(ret, many=True) # return with id field
                         ret = replySerializer.data   
@@ -157,7 +167,7 @@ class APIRouterGenerator:
                             replySerializer = self.get_serializer_class("GET")
                                                         
                             requestSerializer.is_valid(raise_exception=True)
-                            ret  = ModelClass.modelManager(ModelClass).save_model(requestSerializer.validated_data)
+                            ret  = self.getModelManager()(ModelClass).save_model(requestSerializer.validated_data)
                             replySerializer = replySerializer(ret, many=False) # return with id field
                             ret = replySerializer.data                            
                             headers = self.get_success_headers(ret)
@@ -174,7 +184,7 @@ class APIRouterGenerator:
                         serializer.is_valid(raise_exception=True)
                         return self.perform_update(serializer)
                     def perform_update(self, serializer):
-                        ret = ModelClass.modelManager(ModelClass).update_model(serializer.validated_data)
+                        ret = self.getModelManager()(ModelClass).update_model(serializer.validated_data)
                         # ret = serializer.validated_data
                         replySerializer = self.get_serializer_class("GET")
                         replySerializer = replySerializer(ret, many=False) # return with id field

@@ -1,0 +1,67 @@
+[
+  {
+    "pk": 1,
+     
+    "model": "sales_rep.salesrepchannelactivity",
+    "fields": {
+        "sales_rep":"-NzRWbPgDouL8pRtrXgX", 
+      "activity": 13,  
+      "max_capacity": 24,
+      "start_time": "08:00:00",
+      "end_time": "20:00:00",
+      "available": "True"
+    }
+  },
+  {
+    "pk": 2,
+    "model": "sales_rep.salesrepchannelactivity",
+   
+    "fields": {
+        "sales_rep":"-NzRWbPgDouL8pRtrXgX",  
+      "activity": 14,  
+      "max_capacity": 0,  
+      "start_time": null,  
+      "end_time": null,  
+      "available": "True"
+    }
+  },
+  {
+    "model": "sales_rep.salesrepchannelactivity",
+    "pk": 3,
+    
+    "fields": {
+        "sales_rep":"-NzRWbPgDouL8pRtrXgX",  
+      "activity": 15,  
+      "max_capacity": 0,  
+      "start_time": null,  
+      "end_time": null,  
+      "available": "True"
+    }
+  },
+  {
+    "pk": 4,
+    "model": "sales_rep.salesrepchannelactivity",
+    
+    "fields": {
+    "sales_rep":"-NzRWbPgDouL8pRtrXgX",  
+      "activity": 16,  
+      "max_capacity": 0,  
+      "start_time": null,  
+      "end_time": null,  
+      "available": "True"
+    }
+  },
+  {
+    "model": "sales_rep.salesrepchannelactivity",
+    "pk": 5,
+   
+    "fields": {
+        "sales_rep":"-NzRWbPgDouL8pRtrXgX", 
+      "activity": 17,  
+      "max_capacity": 0,  
+      "start_time": null,  
+      "end_time": null,  
+      "available": "True"
+    }
+  }
+]

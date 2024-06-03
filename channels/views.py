@@ -81,19 +81,3 @@ class ChannelUserNameViewSet(viewsets.ModelViewSet):
             return Response({'message': 'Channel username deleted successfully'}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
-# """
-# Create a viewset for each channel
-# """
-# class InstagramViewSet(viewsets.ViewSet):
-#     permission_classes = [IsAuthenticated]
-#     def list(self, request):
-#         # return array of strings
-#         return Response(["instagram", "whatsapp", "linkedIn", "sandbox"])
-    
-#     def create(self, request):
-#         serializer = ChannelUserNameSerializer(data=request.data)
-#         serializer.is_valid(raise_exception=True)
-#         validated_data = serializer.validated_data
-#         # create or update
-#         return Response({"message": "success"})

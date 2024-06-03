@@ -4,7 +4,7 @@ from rest_framework import serializers
 from django.db import IntegrityError
 from django.db import models
 from django.db.models.fields.related import ForeignKey, ManyToManyField, OneToOneField, ManyToOneRel, OneToOneRel
-
+from base.helpers.push_id import PushID
 
 class modelManager(models.Manager):
     class Meta:
@@ -112,7 +112,12 @@ class modelManager(models.Manager):
         filters = Q()
         for field, value in params.items():
             if (field in unique_fields  or field == primary_key) and value is not None:
-                filters |= Q(**{field: value})
+                # case insensitive filters
+                filters |= Q(**{f"{field}__iexact": value})
+                # filters |= Q(**{field: value})
+        # if nothing to filter by, return False
+        if not filters:
+            return False
         return model.objects.filter(filters).exists()
     
     # get from params only the fields which are in model_fields
@@ -129,36 +134,76 @@ class modelManager(models.Manager):
         # remove primary key from valid_params. Assuming it is 'id'
         # if primary_key in valid_params:
         #     valid_params.pop(primary_key)
+        print("valid_params", valid_params, semi_primary_key, unique_fields, primary_key)
         filters = Q()
         if semi_primary_key is None:
             for field, value in valid_params.items():
-                if (field in unique_fields or field == primary_key) and value is not None and value != "":
-                    filters |= Q(**{field: value})
+                print("field===>", field, value)
+                if (field in unique_fields and field is not primary_key) and value is not None and value != "": #'''or field == primary_key'''
+                    print("field", field, value)
+                    # filters |= Q(**{field: value})
+                    filters |= Q(**{f"{field}__iexact": value}) # case insensitive
         else:
-            filters |= Q(**{semi_primary_key: valid_params[semi_primary_key]})
+            # filters |= Q(**{semi_primary_key: valid_params[semi_primary_key]})
+            filters |= Q(**{f"{semi_primary_key}__iexact": valid_params[semi_primary_key]})
 
         recordExists = False
         record_is_deleted = False
-        if semi_primary_key is not None:
+        if filters:
+            print("filters", filters)
             # semi_primary_value = valid_params[semi_primary_key]
             recordExists = self.localModel.objects.filter(filters).exists()
-            record_is_deleted = self.localModel.objects.all_with_deleted().filter(filters).exists()
+            if not recordExists:
+                record_is_deleted = self.localModel.objects.all_with_deleted().filter(filters).exists()
         if record_is_deleted:
             self.localModel.objects.all_with_deleted().filter(filters).first().undelete()
+            valid_params.pop(primary_key)
         local_entry = None
+        ## check type of primary_key
+
+        primary_key_field = self.localModel._meta.get_field(self.localModel._meta.pk.name)
+        pkType = primary_key_field.get_internal_type()
+        print("pkType", pkType)
+
+        if pkType == 'UUIDField':
+            pass
+        elif pkType == 'AutoField':
+            pass 
+        elif pkType == 'BigAutoField':
+            pass 
+        else:
+            if not recordExists or record_is_deleted:
+                push_id = PushID()
+                valid_params[primary_key] = push_id.next_id()
+
         try:
+            # create instance of foreign key model instead of passing id
+            for field, value in valid_params.items():
+                field_descriptor = self.localModel._meta.get_field(field)
+                if isinstance(field_descriptor, (models.ForeignKey, models.OneToOneField)): #todo_checkpoint: are there other relationship fields?
+                    foreign_key_model = field_descriptor.related_model
+                    try:
+                        foreign_instance = foreign_key_model.objects.get(pk=value)
+                        value = foreign_instance  # Set the foreign key instance
+                        valid_params[field] = value
+                    except (foreign_key_model.DoesNotExist, ValueError):
+                        raise serializers.ValidationError(f"Invalid value '{value}' for foreign key '{field}' to model '{foreign_key_model}'.")
+                                    
             local_entry, created = self.localModel.objects.get_or_create(
                 **valid_params
             )
             # Update existing record if not created
             if not created:
+                # Check if field is a foreign key
+                
                 for field, value in valid_params.items():
-                    setattr(local_entry, field, value)
+                    setattr(local_entry, field, value) # remove primaky_key if record_is_deleted
                 local_entry.save()
         except IntegrityError as e:
                 if recordExists:
                     raise serializers.ValidationError(f"Record already exists.")
                 else:
+                    print(e)
                     raise serializers.ValidationError(f"Unknown erorr for record")
 
         return local_entry

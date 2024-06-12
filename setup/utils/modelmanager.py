@@ -1,0 +1,235 @@
+from base.models import BaseModel
+from django.db.models import Q
+from rest_framework import serializers
+from django.db import IntegrityError
+from django.db import models
+from django.db.models.fields.related import ForeignKey, ManyToManyField, OneToOneField, ManyToOneRel, OneToOneRel
+from base.helpers.push_id import PushID
+
+class modelManager(models.Manager):
+    class Meta:
+        app_label = 'setup'  # Replace 'your_app_label' with the actual app label
+
+    def __init__(self, model):
+        self.localModel = model
+
+    def create_dynamic_serializer(self, model, extra_fields = {}, redacted_fields = []):
+        model_fields, _,required_fields, _ = self.getModelFields(model)
+        # Create a base serializer class
+        class DynamicSerializer(serializers.ModelSerializer):
+            class Meta:
+                model = None
+                # fields = '__all__'
+                depth = 2
+                exclude = []
+        DynamicSerializer.Meta.model = model 
+        DynamicSerializer.Meta.exclude = ['id'] 
+        
+        return DynamicSerializer
+        for field_name, field in model_fields.items():            
+            if isinstance(field, (ForeignKey, ManyToManyField, OneToOneField, ManyToOneRel, OneToOneRel)):
+                # Handle relationship fields using appropriate serializer fields
+                if isinstance(field, ForeignKey):
+                    serializer_field = serializers.PrimaryKeyRelatedField(queryset=field.related_model.objects.all(), required=False)
+                elif isinstance(field, ManyToManyField):
+                    serializer_field = serializers.PrimaryKeyRelatedField(queryset=field.related_model.objects.all(), required=False, many=True)
+                elif isinstance(field, OneToOneField):
+                    serializer_field = serializers.PrimaryKeyRelatedField(queryset=field.related_model.objects.all(), required=False)
+                elif isinstance(field, ManyToOneRel):
+                    serializer_field = serializers.PrimaryKeyRelatedField(queryset=field.related_model.objects.all(), required=False, many=True)
+                elif isinstance(field, OneToOneRel):
+                    serializer_field = serializers.PrimaryKeyRelatedField(queryset=field.related_model.objects.all(), required=False)
+                # setattr(DynamicSerializer, field_name, serializer_field)
+            else:
+                try:
+                    serializer_field = self.get_serializer_field(field)
+                    print("serializer_field", serializer_field, field_name, field, required_fields)
+                except:
+                    continue
+
+            setattr(DynamicSerializer, field_name, serializer_field)
+
+        # Dynamically create extra fields
+        for field_name, field_info in extra_fields.items():
+            if field_info["type"] in serializers.FIELD_CLASSES:  # Check if the field type is valid
+                serializer_field = field_info["type"](required=field_info["required"])
+                setattr(DynamicSerializer, field_name, serializer_field)
+        # Dynamically remove redacted fields
+        for field_name in redacted_fields:
+            if field_name in model_fields:
+                delattr(DynamicSerializer, field_name)
+        print(DynamicSerializer)
+        print(dir(DynamicSerializer))
+        return DynamicSerializer
+    
+    def get_serializer_field(self, field):
+        """
+        Get the appropriate serializer field based on the model field.
+        """
+        field_class = serializers.CharField  # Default to CharField
+
+        if isinstance(field, models.IntegerField):
+            field_class = serializers.IntegerField
+        elif isinstance(field, models.FloatField):
+            field_class = serializers.FloatField
+        elif isinstance(field, models.BooleanField):
+            field_class = serializers.BooleanField
+        elif isinstance(field, models.DateField):
+            field_class = serializers.DateField
+        elif isinstance(field, models.DateTimeField):
+            field_class = serializers.DateTimeField
+        elif isinstance(field, models.DecimalField):
+            field_class = serializers.DecimalField
+        elif isinstance(field, models.EmailField):
+            field_class = serializers.EmailField
+        elif isinstance(field, models.URLField):
+            field_class = serializers.URLField
+        elif isinstance(field, models.ImageField):
+            field_class = serializers.ImageField
+        elif isinstance(field, models.FileField):
+            field_class = serializers.FileField
+        elif isinstance(field, models.UUIDField):
+            field_class = serializers.UUIDField
+        elif isinstance(field, models.DurationField):
+            field_class = serializers.DurationField
+        return field_class(required=not field.null, allow_null=field.null)
+    
+    def getDynamicSerializer(self, action, extra_fields = {}, redacted_fields = []):
+        redacted_fields = redacted_fields + ['id'] if action == 'create' else redacted_fields # remove id field for create action
+        return self.create_dynamic_serializer(self.localModel, extra_fields, redacted_fields)
+
+    def getModelFields(self, model):
+        # filters = Q()
+        # model_fields = {field.name for field in model._meta.get_fields()}  # Get model field names
+        model_fields = {field.name: field for field in model._meta.get_fields()} 
+        unique_fields = [field.name for field in model._meta.get_fields() if getattr(field, 'unique', False)]
+        required_fields = [field.name for field in model._meta.get_fields() if getattr(field, 'null', False) == False]
+        primary_key = model._meta.pk.name
+        return (model_fields, unique_fields, required_fields, primary_key)
+    
+    def uniqueFieldsExist(self, model, params = {}):
+        model_fields, unique_fields,_, primary_key = self.getModelFields(model)
+        filters = Q()
+        for field, value in params.items():
+            if (field in unique_fields  or field == primary_key) and value is not None:
+                # case insensitive filters
+                filters |= Q(**{f"{field}__iexact": value})
+                # filters |= Q(**{field: value})
+        # if nothing to filter by, return False
+        if not filters:
+            return False
+        return model.objects.filter(filters).exists()
+    
+    # get from params only the fields which are in model_fields
+    def model_field_params(self, model, params={}):
+        model_fields = {field.name for field in model._meta.get_fields()}  # Get model field names
+        valid_params = {key: value for key, value in params.items() if key in model_fields}
+        return valid_params
+
+    def save_model(self, params = {}, semi_primary_key = None): # semi_primary is the unique field to filter by
+        if self.uniqueFieldsExist(self.localModel, params):
+            raise serializers.ValidationError(f"Record already exists.")
+        valid_params = self.model_field_params(self.localModel, params)        
+        model_fields, unique_fields, required_fields, primary_key = self.getModelFields(self.localModel)
+        # remove primary key from valid_params. Assuming it is 'id'
+        # if primary_key in valid_params:
+        #     valid_params.pop(primary_key)
+        print("valid_params", valid_params, semi_primary_key, unique_fields, primary_key)
+        filters = Q()
+        if semi_primary_key is None:
+            for field, value in valid_params.items():
+                print("field===>", field, value)
+                if (field in unique_fields and field is not primary_key) and value is not None and value != "": #'''or field == primary_key'''
+                    print("field", field, value)
+                    # filters |= Q(**{field: value})
+                    filters |= Q(**{f"{field}__iexact": value}) # case insensitive
+        else:
+            # filters |= Q(**{semi_primary_key: valid_params[semi_primary_key]})
+            filters |= Q(**{f"{semi_primary_key}__iexact": valid_params[semi_primary_key]})
+
+        recordExists = False
+        record_is_deleted = False
+        if filters:
+            print("filters", filters)
+            # semi_primary_value = valid_params[semi_primary_key]
+            recordExists = self.localModel.objects.filter(filters).exists()
+            if not recordExists:
+                record_is_deleted = self.localModel.objects.all_with_deleted().filter(filters).exists()
+        if record_is_deleted:
+            self.localModel.objects.all_with_deleted().filter(filters).first().undelete()
+            valid_params.pop(primary_key)
+        local_entry = None
+        ## check type of primary_key
+
+        primary_key_field = self.localModel._meta.get_field(self.localModel._meta.pk.name)
+        pkType = primary_key_field.get_internal_type()
+        print("pkType", pkType)
+
+        if pkType == 'UUIDField':
+            pass
+        elif pkType == 'AutoField':
+            pass 
+        elif pkType == 'BigAutoField':
+            pass 
+        else:
+            if not recordExists or record_is_deleted:
+                push_id = PushID()
+                valid_params[primary_key] = push_id.next_id()
+
+        try:
+            # create instance of foreign key model instead of passing id
+            for field, value in valid_params.items():
+                field_descriptor = self.localModel._meta.get_field(field)
+                if isinstance(field_descriptor, (models.ForeignKey, models.OneToOneField)): #todo_checkpoint: are there other relationship fields?
+                    foreign_key_model = field_descriptor.related_model
+                    try:
+                        foreign_instance = foreign_key_model.objects.get(pk=value)
+                        value = foreign_instance  # Set the foreign key instance
+                        valid_params[field] = value
+                    except (foreign_key_model.DoesNotExist, ValueError):
+                        raise serializers.ValidationError(f"Invalid value '{value}' for foreign key '{field}' to model '{foreign_key_model}'.")
+                                    
+            local_entry, created = self.localModel.objects.get_or_create(
+                **valid_params
+            )
+            # Update existing record if not created
+            if not created:
+                # Check if field is a foreign key
+                
+                for field, value in valid_params.items():
+                    setattr(local_entry, field, value) # remove primaky_key if record_is_deleted
+                local_entry.save()
+        except IntegrityError as e:
+                if recordExists:
+                    raise serializers.ValidationError(f"Record already exists.")
+                else:
+                    print(e)
+                    raise serializers.ValidationError(f"Unknown erorr for record")
+
+        return local_entry
+
+    def update_model(self, params = {}): # semi_primary is the unique field to filter by
+        valid_params = self.model_field_params(self.localModel, params)        
+        model_fields, unique_fields, required_fields, primary_key = self.getModelFields(self.localModel)
+        filters = Q()
+        for field, value in valid_params.items():
+            if (field == primary_key):
+                filters &= Q(**{field: value})
+        local_entry = None
+        try:
+            local_entry = self.localModel.objects.filter(filters).first()
+            for field, value in valid_params.items():
+                setattr(local_entry, field, value)
+            local_entry.save()
+        except IntegrityError as e:
+            print(e)
+            raise serializers.ValidationError(f"Unknown erorr for record")
+        return local_entry
+
+    
+    def read_model(self, params = {}):
+        filters = Q()
+        if params.get("filters"):
+            for field, value in params.get("filters").items():
+                filters &= Q(**{field: value})
+        return self.localModel.objects.filter(filters)

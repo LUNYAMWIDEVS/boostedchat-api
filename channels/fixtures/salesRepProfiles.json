@@ -1,0 +1,9 @@
+[
+  {
+    "model": "sales_rep.salesrepprofile",
+    "fields": {
+      "sales_rep":"-NzRWbPgDouL8pRtrXgX",  
+      "profile": [1, 2] 
+    }
+  }
+]

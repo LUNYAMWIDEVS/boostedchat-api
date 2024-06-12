@@ -1,0 +1,155 @@
+[
+  {
+    "id":1,
+    "model": "channels.ChannelActivity",
+    "fields": {
+      "channel": 1,  
+      "activity": "Login",
+      "description": "Log in SalesRep."
+    }
+  },
+  {
+    "id":2,
+    "model": "channels.ChannelActivity",
+    "fields": {
+      "channel": 1,  
+      "activity": "Comment",
+      "description": "User added a comment to the channel."
+    }
+  },
+  {
+    "id":3,
+    "model": "channels.ChannelActivity",
+    "fields": {
+      "channel": 2, 
+      "activity": "Like",
+      "description": "Like."
+    }
+  },
+  {
+    "id":4,
+    "model": "channels.ChannelActivity",
+    "fields": {
+      "channel": 2, 
+      "activity": "Send Message",
+      "description": "Send Message."
+    }
+  },
+  {
+    "id":5,
+    "model": "channels.ChannelActivity",
+    "fields": {
+      "channel": 3, 
+      "activity": "Receive Message",
+      "description": "Receive Message on Channel."
+    }
+  },
+  {
+    "id":6,
+    "model": "channels.ChannelActivity",
+    "fields": {
+      "channel": 3, 
+      "activity": "Like",
+      "description": "Like."
+    }
+  },
+  {
+    "id":7,
+    "model": "channels.ChannelActivity",
+    "fields": {
+      "channel": 4, 
+      "activity": "Comment",
+      "description": "User added a comment to the channel."
+    }
+  },
+  {
+    "id":8,
+    "model": "channels.ChannelActivity",
+    "fields": {
+      "channel": 4, 
+      "activity": "Like",
+      "description": "Like."
+    }
+  },
+  {
+    "id":9,
+    "model": "channels.ChannelActivity",
+    "fields": {
+      "channel": 5, 
+      "activity": "Comment",
+      "description": "User added a comment to the channel."
+    }
+  },
+  {
+    "id":10,
+    "model": "channels.ChannelActivity",
+    "fields": {
+      "channel": 5, 
+      "activity": "Like",
+      "description": "Like."
+    }
+  },
+  {
+    "id":11,
+    "model": "channels.ChannelActivity",
+    "fields": {
+      "channel": 6, 
+      "activity": "Comment",
+      "description": "User added a comment to the channel."
+    }
+  },
+  {
+    "id":12,
+    "model": "channels.ChannelActivity",
+    "fields": {
+      "channel": 6, 
+      "activity": "Like",
+      "description": "Like."
+    }
+  },
+  {
+    "id":13,
+    "model": "channels.ChannelActivity",
+    "fields": {
+      "channel": 7,  
+      "activity": "Login",
+      "description": "Log in SalesRep."
+    }
+  },
+  {
+    "id":14,
+    "model": "channels.ChannelActivity",
+    "fields": {
+      "channel": 7,  
+      "activity": "Comment",
+      "description": "User added a comment to the channel."
+    }
+  },
+  {
+    "id":15,
+    "model": "channels.ChannelActivity",
+    "fields": {
+      "channel": 7, 
+      "activity": "Like",
+      "description": "Like."
+    }
+  },
+  {
+    "id":16,
+    "model": "channels.ChannelActivity",
+    "fields": {
+      "channel": 7, 
+      "activity": "Send Message",
+      "description": "Send Message."
+    }
+  },
+  {
+    "id":17,
+    "model": "channels.ChannelActivity",
+    "fields": {
+      "channel": 7, 
+      "activity": "Receive Message",
+      "description": "Receive Message on Channel."
+    }
+  }
+]

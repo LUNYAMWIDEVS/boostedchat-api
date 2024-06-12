@@ -1,7 +1,7 @@
 from django.contrib import admin
-from .models import Leads, LeadScore, LeadOutreachTrial, LeadChannel, LeadOutreachActivities
+from .models import Leadv1, LeadScore, LeadOutreachTrial, LeadChannel, LeadOutreachActivities
 
-@admin.register(Leads)
+@admin.register(Leadv1)
 class LeadsAdmin(admin.ModelAdmin):
     def get_form(self, request, obj=None, **kwargs):
         self.exclude = ("id",)

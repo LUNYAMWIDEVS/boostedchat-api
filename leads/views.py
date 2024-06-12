@@ -3,7 +3,7 @@ from rest_framework.response import Response
 
 from instagram.models import Account
 from .serializers import LeadSerializer, LeadsSerializer
-from .models import Lead, Leads
+from .models import Lead, Leadv1
 
 class LeadManager(viewsets.ModelViewSet):
     queryset = Lead.objects.all()
@@ -20,7 +20,7 @@ class LeadManager(viewsets.ModelViewSet):
         return Response(response, status=status.HTTP_200_OK)
 
 class LeadsViewSet(viewsets.ModelViewSet):
-    queryset = Leads.objects.all()
+    queryset = Leadv1.objects.all()
     serializer_class = LeadsSerializer
 
     # todo: implement filters later

@@ -97,10 +97,10 @@ class SalesRepWorkingShiftManager(modelManager):
             record.save()
         return super().save_model(params)
 
-class ChannelUserNameSerializer(serializers.Serializer):
+class WorkingShiftsSerializer(serializers.Serializer):
         sales_rep = serializers.CharField(required=True)
         channel = serializers.IntegerField(required=True)
-        shift_number = serializers.IntegerField(required=False) # What is the need for this? Just get the last shift for channel
+        # shift_number = serializers.IntegerField(required=False) # What is the need for this? Just get the last shift for channel
         start_time = serializers.TimeField(required=True)
         end_time = serializers.TimeField(required=True)
         active = serializers.BooleanField(required=False, default=True)
@@ -111,23 +111,23 @@ class SalesRepsChannelWorkingShift(models.Model):
     modelManager = SalesRepWorkingShiftManager
     sales_rep = models.ForeignKey(SalesRep, on_delete=models.CASCADE)
     channel = models.ForeignKey(Channel, on_delete=models.CASCADE)
-    shift_number = models.IntegerField() # what is the need for this? Just get the last shift for channel
+    # shift_number = models.IntegerField() # what is the need for this? Just get the last shift for channel
     # shift_date = models.DateField()
     start_time = models.TimeField()
     end_time = models.TimeField()
     active = models.BooleanField(default=True)
 
     localSerializers = {
-        "ChannelUserNameSerializer":{
+        "WorkingShiftsSerializer":{
             "methods": ["POST"],
-            "serializer": ChannelUserNameSerializer
+            "serializer": WorkingShiftsSerializer
         }
     }
 
-    unique_together = ('sales_rep', 'channel', 'shift_number')
+    # unique_together = ('sales_rep', 'channel', 'shift_number')
 
     def __str__(self):
-        return f"{self.shift_number} of {self.sales_rep} on {self.channel}"
+        return f"{self.id} of {self.sales_rep} on {self.channel}"
     
 # # Records the activity done in each shift
 # class SalesRepChannelWorkingShiftActivity(models.Model):

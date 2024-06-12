@@ -30,6 +30,10 @@ class APIRouterGenerator:
     @staticmethod
     def listMethods():
         return ['POST', 'GET', 'PUT', 'PATCH', 'DELETE']
+    
+    def has_fields(self, model_class, *fields):
+        """Check if the model class has all the specified fields."""
+        return all(hasattr(model_class, field) for field in fields)
 
     def make_api_serializers(self, api_models, base_serializer_class=serializers.ModelSerializer):
         api_serializers = []
@@ -40,9 +44,13 @@ class APIRouterGenerator:
                 "GET": (),
                 "PUT": (),
                 # "PATCH": ('created_at', 'updated_at', 'deleted_at'),
-                "PATCH": ('created_at', 'updated_at', 'deleted_at'),
+                "PATCH": (),
                 "DELETE": (),
             }
+
+            if self.has_fields(ModelClass, 'created_at', 'updated_at', 'deleted_at'):
+                exclude_fields_for_methods["PATCH"] = ('created_at', 'updated_at', 'deleted_at')
+    
             methods = self.listMethods()
             methods_serializers = {}
             for method in methods:

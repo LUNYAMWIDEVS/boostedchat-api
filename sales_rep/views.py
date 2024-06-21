@@ -109,12 +109,12 @@ class SalesRepManager(viewsets.ModelViewSet):
         # Find the sales rep with the minimum moving average
         best_influencer = min(influencer_moving_averages, key=influencer_moving_averages.get)
 
-        # Assign the lead to the best sales rep
+        # Assign the lead to the best influencer
         lead.assigned_to = best_influencer
         lead.save()
         # Record the assignment in the history
         LeadAssignmentHistory.objects.create(influencer=best_influencer, lead=lead)
-        return Response({"message":"Successfully assigned salesrep"},status = status.HTTP_200_OK)
+        return Response({"message":"Successfully assigned influencer"},status = status.HTTP_200_OK)
 
     @action(detail=False, methods=["post"], url_path="assign-accounts")
     def assign_accounts(self, request, pk=None):

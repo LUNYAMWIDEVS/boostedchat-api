@@ -18,7 +18,7 @@ $ pip install -r requirements.txt
 ```
 
 3.  Set up the initial migration for our custom user models in users and build the database.
-
+to access all endpoints visit https://api.booksy.us.boostedchat.com/
 ```
 (drfx) $ python manage.py makemigrations
 (drfx) $ python manage.py migrate
